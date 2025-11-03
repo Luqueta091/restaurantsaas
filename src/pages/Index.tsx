@@ -146,8 +146,8 @@ const Index = () => {
     try {
       // Validar telefone brasileiro
       const phoneDigits = newCustomer.phone.replace(/\D/g, '');
-      if (!phoneDigits.startsWith('55') || phoneDigits.length !== 13) {
-        toast.error("Número deve ser do Brasil (+55) com 11 dígitos");
+      if (!phoneDigits.startsWith('55')) {
+        toast.error("Número deve ser do Brasil (+55)");
         setCreating(false);
         return;
       }
@@ -278,7 +278,7 @@ const Index = () => {
                 required
               />
               <p className="text-xs text-muted-foreground">
-                Exemplo: +55 11 98765-4321 (11 dígitos após +55)
+                Exemplo: +55 11 98765-4321
               </p>
             </div>
             <div className="space-y-2">
