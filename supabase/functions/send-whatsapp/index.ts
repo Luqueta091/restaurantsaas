@@ -41,43 +41,66 @@ serve(async (req) => {
       throw new Error('Restaurante não encontrado');
     }
 
-    // Preparar payload para n8n
-    const n8nPayload = {
-      to: customer.phone,
-      message: message,
-      customerName: customer.name,
-      restaurantName: restaurant.name,
-      templateName: templateName,
-      mediaUrl: mediaUrl || null,
-    };
+    // Obter credenciais do Twilio
+    const TWILIO_ACCOUNT_SID = Deno.env.get('TWILIO_ACCOUNT_SID');
+    const TWILIO_AUTH_TOKEN = Deno.env.get('TWILIO_AUTH_TOKEN');
+    const TWILIO_WHATSAPP_NUMBER = Deno.env.get('TWILIO_WHATSAPP_NUMBER');
 
-    console.log('Enviando para n8n:', n8nPayload);
+    if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_WHATSAPP_NUMBER) {
+      throw new Error('Credenciais do Twilio não configuradas');
+    }
 
-    // URL do webhook do n8n (configurável via secret)
-    const N8N_WEBHOOK_URL = Deno.env.get('N8N_WEBHOOK_URL');
+    console.log('Enviando mensagem via Twilio para:', customer.phone);
+
+    // Formatar números no formato WhatsApp (whatsapp:+...)
+    const fromNumber = `whatsapp:+${TWILIO_WHATSAPP_NUMBER}`;
+    const toNumber = `whatsapp:+${customer.phone.replace(/\D/g, '')}`;
+
+    // Preparar corpo da requisição (x-www-form-urlencoded)
+    const twilioParams = new URLSearchParams({
+      From: fromNumber,
+      To: toNumber,
+      Body: message,
+    });
+
+    // Adicionar mídia se fornecida
+    if (mediaUrl) {
+      twilioParams.append('MediaUrl', mediaUrl);
+    }
+
+    // Criar autenticação Basic Auth
+    const authString = btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`);
     
     let messageStatus = 'sent';
     
-    if (N8N_WEBHOOK_URL) {
-      // Enviar para n8n
-      const n8nResponse = await fetch(N8N_WEBHOOK_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(n8nPayload),
-      });
+    try {
+      // Enviar mensagem via Twilio API
+      const twilioResponse = await fetch(
+        `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Basic ${authString}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: twilioParams.toString(),
+        }
+      );
 
-      if (!n8nResponse.ok) {
-        console.error('Erro ao enviar para n8n:', await n8nResponse.text());
+      const twilioResult = await twilioResponse.json();
+
+      if (!twilioResponse.ok) {
+        console.error('Erro ao enviar via Twilio:', twilioResult);
         messageStatus = 'failed';
-      } else {
-        console.log('Mensagem enviada para n8n com sucesso');
-        messageStatus = 'sent';
+        throw new Error(twilioResult.message || 'Erro ao enviar mensagem via Twilio');
       }
-    } else {
-      console.warn('N8N_WEBHOOK_URL não configurado. Mensagem será salva mas não enviada.');
-      messageStatus = 'queued';
+
+      console.log('Mensagem enviada via Twilio com sucesso:', twilioResult.sid);
+      messageStatus = 'sent';
+    } catch (error) {
+      console.error('Erro ao enviar via Twilio:', error);
+      messageStatus = 'failed';
+      throw error;
     }
 
     // Salvar mensagem no banco de dados
@@ -90,7 +113,7 @@ serve(async (req) => {
         variables: { message },
         media_url: mediaUrl,
         status: messageStatus,
-        via: 'n8n',
+        via: 'twilio',
       })
       .select()
       .single();
@@ -132,7 +155,6 @@ serve(async (req) => {
       JSON.stringify({ 
         success: true, 
         message: savedMessage,
-        n8nConfigured: !!N8N_WEBHOOK_URL,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
