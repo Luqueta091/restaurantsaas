@@ -8,6 +8,7 @@ import { CustomerList } from "@/components/CustomerList";
 import { RecentMessages } from "@/components/RecentMessages";
 import { AIChatbot } from "@/components/AIChatbot";
 import { AIFeatures } from "@/components/AIFeatures";
+import { SendMessageDialog } from "@/components/SendMessageDialog";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -29,6 +30,17 @@ const Index = () => {
     birthday: "",
   });
   const [creating, setCreating] = useState(false);
+  const [sendMessageDialog, setSendMessageDialog] = useState<{
+    open: boolean;
+    customerId: string;
+    customerName: string;
+    customerPhone: string;
+  }>({
+    open: false,
+    customerId: "",
+    customerName: "",
+    customerPhone: "",
+  });
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -150,8 +162,13 @@ const Index = () => {
     }
   };
 
-  const handleSendMessage = (customerId: string) => {
-    toast.info("Funcionalidade de envio de mensagem em desenvolvimento!");
+  const handleSendMessage = (customerId: string, customerName: string, customerPhone: string) => {
+    setSendMessageDialog({
+      open: true,
+      customerId,
+      customerName,
+      customerPhone,
+    });
   };
 
   if (loading) {
@@ -202,6 +219,16 @@ const Index = () => {
       </main>
 
       <AIChatbot />
+
+      <SendMessageDialog
+        open={sendMessageDialog.open}
+        onOpenChange={(open) => setSendMessageDialog({ ...sendMessageDialog, open })}
+        customerId={sendMessageDialog.customerId}
+        customerName={sendMessageDialog.customerName}
+        customerPhone={sendMessageDialog.customerPhone}
+        restaurantId={restaurant?.id || ""}
+        onSuccess={loadRestaurantData}
+      />
 
       <Dialog open={showNewCustomerDialog} onOpenChange={setShowNewCustomerDialog}>
         <DialogContent>

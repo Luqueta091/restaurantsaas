@@ -19,7 +19,7 @@ interface Customer {
 
 interface CustomerListProps {
   customers: Customer[];
-  onSendMessage: (customerId: string) => void;
+  onSendMessage: (customerId: string, customerName: string, customerPhone: string) => void;
 }
 
 export const CustomerList = ({ customers, onSendMessage }: CustomerListProps) => {
@@ -107,7 +107,7 @@ export const CustomerList = ({ customers, onSendMessage }: CustomerListProps) =>
                 </div>
                 <Button
                   size="sm"
-                  onClick={() => onSendMessage(customer.id)}
+                  onClick={() => onSendMessage(customer.id, customer.name, customer.phone)}
                   className="bg-gradient-success hover:opacity-90"
                 >
                   <MessageSquare className="w-4 h-4 mr-2" />
