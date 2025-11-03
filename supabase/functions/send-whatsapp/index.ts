@@ -68,9 +68,7 @@ serve(async (req) => {
     // Preparar corpo da requisição para Evolution API
     const evolutionBody: any = {
       number: `${cleanCustomerPhone}@s.whatsapp.net`,
-      textMessage: {
-        text: message,
-      }
+      text: message,
     };
 
     // Adicionar mídia se fornecida
