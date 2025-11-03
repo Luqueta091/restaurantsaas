@@ -6,6 +6,8 @@ import { Header } from "@/components/Header";
 import { DashboardStats } from "@/components/DashboardStats";
 import { CustomerList } from "@/components/CustomerList";
 import { RecentMessages } from "@/components/RecentMessages";
+import { AIChatbot } from "@/components/AIChatbot";
+import { AIFeatures } from "@/components/AIFeatures";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -195,7 +197,11 @@ const Index = () => {
           />
           <RecentMessages messages={messages} />
         </div>
+
+        <AIFeatures />
       </main>
+
+      <AIChatbot />
 
       <Dialog open={showNewCustomerDialog} onOpenChange={setShowNewCustomerDialog}>
         <DialogContent>
