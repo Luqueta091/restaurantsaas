@@ -26,7 +26,7 @@ const Index = () => {
   const [showNewCustomerDialog, setShowNewCustomerDialog] = useState(false);
   const [newCustomer, setNewCustomer] = useState({
     name: "",
-    phone: "",
+    phone: "+55",
     birthday: "",
   });
   const [creating, setCreating] = useState(false);
@@ -144,6 +144,14 @@ const Index = () => {
     setCreating(true);
 
     try {
+      // Validar telefone brasileiro
+      const phoneDigits = newCustomer.phone.replace(/\D/g, '');
+      if (!phoneDigits.startsWith('55') || phoneDigits.length !== 13) {
+        toast.error("Número deve ser do Brasil (+55) com 11 dígitos");
+        setCreating(false);
+        return;
+      }
+
       const { error } = await supabase.from("customers").insert({
         restaurant_id: restaurant?.id,
         name: newCustomer.name,
@@ -155,7 +163,7 @@ const Index = () => {
 
       toast.success("Cliente adicionado com sucesso!");
       setShowNewCustomerDialog(false);
-      setNewCustomer({ name: "", phone: "", birthday: "" });
+      setNewCustomer({ name: "", phone: "+55", birthday: "" });
       loadRestaurantData();
     } catch (error: any) {
       toast.error("Erro ao adicionar cliente: " + error.message);
@@ -253,16 +261,25 @@ const Index = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="phone">Telefone *</Label>
+              <Label htmlFor="phone">Telefone * (Brasil)</Label>
               <Input
                 id="phone"
                 type="tel"
+                placeholder="+55 11 98765-4321"
                 value={newCustomer.phone}
-                onChange={(e) =>
-                  setNewCustomer({ ...newCustomer, phone: e.target.value })
-                }
+                onChange={(e) => {
+                  let value = e.target.value;
+                  // Sempre manter +55 no início
+                  if (!value.startsWith('+55')) {
+                    value = '+55' + value.replace(/\D/g, '');
+                  }
+                  setNewCustomer({ ...newCustomer, phone: value });
+                }}
                 required
               />
+              <p className="text-xs text-muted-foreground">
+                Exemplo: +55 11 98765-4321 (11 dígitos após +55)
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="birthday">Data de Nascimento</Label>
