@@ -41,70 +41,60 @@ serve(async (req) => {
       throw new Error('Restaurante não encontrado');
     }
 
-    // Obter credenciais do Twilio
-    const TWILIO_ACCOUNT_SID = Deno.env.get('TWILIO_ACCOUNT_SID');
-    const TWILIO_AUTH_TOKEN = Deno.env.get('TWILIO_AUTH_TOKEN');
-    const TWILIO_WHATSAPP_NUMBER = Deno.env.get('TWILIO_WHATSAPP_NUMBER');
+    // Obter credenciais da Evolution API
+    const EVOLUTION_API_URL = Deno.env.get('EVOLUTION_API_URL');
+    const EVOLUTION_API_TOKEN = Deno.env.get('EVOLUTION_API_TOKEN');
 
-    if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_WHATSAPP_NUMBER) {
-      throw new Error('Credenciais do Twilio não configuradas');
+    if (!EVOLUTION_API_URL || !EVOLUTION_API_TOKEN) {
+      throw new Error('Credenciais da Evolution API não configuradas');
     }
 
-    console.log('Enviando mensagem via Twilio para:', customer.phone);
+    console.log('Enviando mensagem via Evolution API para:', customer.phone);
 
-    // Limpar e formatar números no formato WhatsApp (whatsapp:+...)
-    const cleanTwilioNumber = TWILIO_WHATSAPP_NUMBER.replace(/\D/g, '');
+    // Limpar e formatar número no formato internacional
     const cleanCustomerPhone = customer.phone.replace(/\D/g, '');
     
-    const fromNumber = `whatsapp:+${cleanTwilioNumber}`;
-    const toNumber = `whatsapp:+${cleanCustomerPhone}`;
+    console.log('Para:', cleanCustomerPhone);
 
-    console.log('From:', fromNumber);
-    console.log('To:', toNumber);
-
-    // Preparar corpo da requisição (x-www-form-urlencoded)
-    const twilioParams = new URLSearchParams({
-      From: fromNumber,
-      To: toNumber,
-      Body: message,
-    });
+    // Preparar corpo da requisição para Evolution API
+    const evolutionBody: any = {
+      number: cleanCustomerPhone,
+      text: message,
+    };
 
     // Adicionar mídia se fornecida
     if (mediaUrl) {
-      twilioParams.append('MediaUrl', mediaUrl);
+      evolutionBody.mediaUrl = mediaUrl;
     }
-
-    // Criar autenticação Basic Auth
-    const authString = btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`);
     
     let messageStatus = 'sent';
     
     try {
-      // Enviar mensagem via Twilio API
-      const twilioResponse = await fetch(
-        `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`,
+      // Enviar mensagem via Evolution API
+      const evolutionResponse = await fetch(
+        `${EVOLUTION_API_URL}/message/sendText/${cleanCustomerPhone}`,
         {
           method: 'POST',
           headers: {
-            'Authorization': `Basic ${authString}`,
-            'Content-Type': 'application/x-www-form-urlencoded',
+            'Authorization': `Bearer ${EVOLUTION_API_TOKEN}`,
+            'Content-Type': 'application/json',
           },
-          body: twilioParams.toString(),
+          body: JSON.stringify(evolutionBody),
         }
       );
 
-      const twilioResult = await twilioResponse.json();
+      const evolutionResult = await evolutionResponse.json();
 
-      if (!twilioResponse.ok) {
-        console.error('Erro ao enviar via Twilio:', twilioResult);
+      if (!evolutionResponse.ok) {
+        console.error('Erro ao enviar via Evolution API:', evolutionResult);
         messageStatus = 'failed';
-        throw new Error(twilioResult.message || 'Erro ao enviar mensagem via Twilio');
+        throw new Error(evolutionResult.message || 'Erro ao enviar mensagem via Evolution API');
       }
 
-      console.log('Mensagem enviada via Twilio com sucesso:', twilioResult.sid);
+      console.log('Mensagem enviada via Evolution API com sucesso:', evolutionResult);
       messageStatus = 'sent';
     } catch (error) {
-      console.error('Erro ao enviar via Twilio:', error);
+      console.error('Erro ao enviar via Evolution API:', error);
       messageStatus = 'failed';
       throw error;
     }
@@ -119,7 +109,7 @@ serve(async (req) => {
         variables: { message },
         media_url: mediaUrl,
         status: messageStatus,
-        via: 'twilio',
+        via: 'evolution',
       })
       .select()
       .single();
