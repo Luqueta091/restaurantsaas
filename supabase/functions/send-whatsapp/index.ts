@@ -44,8 +44,9 @@ serve(async (req) => {
     // Obter credenciais da Evolution API
     const EVOLUTION_API_URL = Deno.env.get('EVOLUTION_API_URL');
     const EVOLUTION_API_TOKEN = Deno.env.get('EVOLUTION_API_TOKEN');
+    const EVOLUTION_INSTANCE_NAME = Deno.env.get('EVOLUTION_INSTANCE_NAME');
 
-    if (!EVOLUTION_API_URL || !EVOLUTION_API_TOKEN) {
+    if (!EVOLUTION_API_URL || !EVOLUTION_API_TOKEN || !EVOLUTION_INSTANCE_NAME) {
       throw new Error('Credenciais da Evolution API não configuradas');
     }
 
@@ -72,7 +73,7 @@ serve(async (req) => {
     try {
       // Enviar mensagem via Evolution API
       const evolutionResponse = await fetch(
-        `${EVOLUTION_API_URL}/message/sendText/${cleanCustomerPhone}`,
+        `${EVOLUTION_API_URL}/message/sendText/${EVOLUTION_INSTANCE_NAME}`,
         {
           method: 'POST',
           headers: {
