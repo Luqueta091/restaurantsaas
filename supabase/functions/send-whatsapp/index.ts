@@ -84,12 +84,33 @@ serve(async (req) => {
         }
       );
 
-      const evolutionResult = await evolutionResponse.json();
+      const contentType = evolutionResponse.headers.get('content-type') || '';
+      let evolutionResult: any = null;
+      let evolutionRawText: string | null = null;
+      try {
+        if (contentType.includes('application/json')) {
+          evolutionResult = await evolutionResponse.json();
+        } else {
+          evolutionRawText = await evolutionResponse.text();
+          evolutionResult = { raw: evolutionRawText };
+        }
+      } catch (parseErr) {
+        // Fallback in case parsing fails (e.g., HTML error page)
+        try {
+          evolutionRawText = await evolutionResponse.text();
+        } catch {}
+        evolutionResult = { raw: evolutionRawText, parseError: String(parseErr) };
+      }
 
       if (!evolutionResponse.ok) {
-        console.error('Erro ao enviar via Evolution API:', evolutionResult);
+        console.error('Erro ao enviar via Evolution API:', {
+          status: evolutionResponse.status,
+          statusText: evolutionResponse.statusText,
+          result: evolutionResult,
+        });
         messageStatus = 'failed';
-        throw new Error(evolutionResult.message || 'Erro ao enviar mensagem via Evolution API');
+        const apiMsg = (evolutionResult && (evolutionResult.message || evolutionResult.error)) || undefined;
+        throw new Error(apiMsg || `Erro ao enviar mensagem via Evolution API (status ${evolutionResponse.status})`);
       }
 
       console.log('Mensagem enviada via Evolution API com sucesso:', evolutionResult);
