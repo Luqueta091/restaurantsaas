@@ -50,12 +50,15 @@ serve(async (req) => {
       throw new Error('Credenciais da Evolution API não configuradas');
     }
 
-    console.log('Enviando mensagem via Evolution API para:', customer.phone);
+    console.log('=== Iniciando envio via Evolution API ===');
+    console.log('Cliente:', customer.phone);
+    console.log('Evolution API URL:', EVOLUTION_API_URL);
+    console.log('Instance Name:', EVOLUTION_INSTANCE_NAME);
 
     // Limpar e formatar número no formato internacional
     const cleanCustomerPhone = customer.phone.replace(/\D/g, '');
     
-    console.log('Para:', cleanCustomerPhone);
+    console.log('Número formatado:', cleanCustomerPhone);
 
     // Preparar corpo da requisição para Evolution API
     const evolutionBody: any = {
@@ -68,21 +71,27 @@ serve(async (req) => {
       evolutionBody.mediaUrl = mediaUrl;
     }
     
+    console.log('Body da requisição:', JSON.stringify(evolutionBody));
+    
     let messageStatus = 'sent';
     
     try {
+      const url = `${EVOLUTION_API_URL}/message/sendText/${EVOLUTION_INSTANCE_NAME}`;
+      console.log('URL completa:', url);
+      console.log('Token presente:', EVOLUTION_API_TOKEN ? 'Sim (primeiros 10 chars: ' + EVOLUTION_API_TOKEN.substring(0, 10) + '...)' : 'Não');
+      
       // Enviar mensagem via Evolution API
-      const evolutionResponse = await fetch(
-        `${EVOLUTION_API_URL}/message/sendText/${EVOLUTION_INSTANCE_NAME}`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${EVOLUTION_API_TOKEN}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(evolutionBody),
-        }
-      );
+      const evolutionResponse = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${EVOLUTION_API_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(evolutionBody),
+      });
+      
+      console.log('Status da resposta:', evolutionResponse.status);
+      console.log('Headers da resposta:', JSON.stringify(Object.fromEntries(evolutionResponse.headers.entries())));
 
       const contentType = evolutionResponse.headers.get('content-type') || '';
       let evolutionResult: any = null;
