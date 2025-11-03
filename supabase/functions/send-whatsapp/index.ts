@@ -56,14 +56,21 @@ serve(async (req) => {
     console.log('Instance Name:', EVOLUTION_INSTANCE_NAME);
 
     // Limpar e formatar número no formato internacional
-    const cleanCustomerPhone = customer.phone.replace(/\D/g, '');
+    let cleanCustomerPhone = customer.phone.replace(/\D/g, '');
+    
+    // Se o número não começar com o código do país, adicionar o Brasil (55)
+    if (!cleanCustomerPhone.startsWith('55') && cleanCustomerPhone.length <= 11) {
+      cleanCustomerPhone = '55' + cleanCustomerPhone;
+    }
     
     console.log('Número formatado:', cleanCustomerPhone);
 
     // Preparar corpo da requisição para Evolution API
     const evolutionBody: any = {
-      number: cleanCustomerPhone,
-      text: message,
+      number: `${cleanCustomerPhone}@s.whatsapp.net`,
+      textMessage: {
+        text: message,
+      }
     };
 
     // Adicionar mídia se fornecida
