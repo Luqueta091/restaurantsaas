@@ -77,9 +77,11 @@ const Index = () => {
         .from("restaurants")
         .select("*")
         .eq("owner_id", session?.user.id)
-        .single();
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
 
-      if (restaurantError && restaurantError.code === "PGRST116") {
+      if (!restaurantData) {
         // Restaurante não existe, criar
         const { data: newRestaurant, error: createError } = await supabase
           .from("restaurants")
