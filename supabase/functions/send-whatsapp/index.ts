@@ -52,9 +52,15 @@ serve(async (req) => {
 
     console.log('Enviando mensagem via Twilio para:', customer.phone);
 
-    // Formatar números no formato WhatsApp (whatsapp:+...)
-    const fromNumber = `whatsapp:+${TWILIO_WHATSAPP_NUMBER}`;
-    const toNumber = `whatsapp:+${customer.phone.replace(/\D/g, '')}`;
+    // Limpar e formatar números no formato WhatsApp (whatsapp:+...)
+    const cleanTwilioNumber = TWILIO_WHATSAPP_NUMBER.replace(/\D/g, '');
+    const cleanCustomerPhone = customer.phone.replace(/\D/g, '');
+    
+    const fromNumber = `whatsapp:+${cleanTwilioNumber}`;
+    const toNumber = `whatsapp:+${cleanCustomerPhone}`;
+
+    console.log('From:', fromNumber);
+    console.log('To:', toNumber);
 
     // Preparar corpo da requisição (x-www-form-urlencoded)
     const twilioParams = new URLSearchParams({
