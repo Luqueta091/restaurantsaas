@@ -84,8 +84,9 @@ serve(async (req) => {
       const evolutionResponse = await fetch(url, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${EVOLUTION_API_TOKEN}`,
+          'apikey': EVOLUTION_API_TOKEN,
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
         body: JSON.stringify(evolutionBody),
       });
