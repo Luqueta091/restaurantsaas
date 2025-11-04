@@ -2,3 +2,6 @@ project_id = "pugsixsuotvpddncwonk"
 
 [functions.whatsapp-webhook]
 verify_jwt = false
+
+[functions.process-scheduled-messages]
+verify_jwt = false
