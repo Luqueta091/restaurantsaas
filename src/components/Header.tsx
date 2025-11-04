@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "sonner";
-import { ChefHat, LogOut, Settings } from "lucide-react";
+import { ChefHat, LogOut, Settings, ShoppingBag, Home } from "lucide-react";
 import { SettingsDialog } from "./SettingsDialog";
 
 interface HeaderProps {
@@ -15,6 +15,7 @@ interface HeaderProps {
 
 export const Header = ({ restaurantName, restaurantId, evolutionInstanceName, onSettingsSaved }: HeaderProps) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [showSettings, setShowSettings] = useState(false);
 
   const handleLogout = async () => {
@@ -42,6 +43,28 @@ export const Header = ({ restaurantName, restaurantId, evolutionInstanceName, on
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {location.pathname === "/" && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate("/produtos")}
+              className="gap-2"
+            >
+              <ShoppingBag className="w-4 h-4" />
+              Cardápio
+            </Button>
+          )}
+          {location.pathname === "/produtos" && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate("/")}
+              className="gap-2"
+            >
+              <Home className="w-4 h-4" />
+              Dashboard
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"

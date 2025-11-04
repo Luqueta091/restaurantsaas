@@ -244,14 +244,50 @@ export type Database = {
           },
         ]
       }
+      order_items: {
+        Row: {
+          created_at: string
+          id: string
+          notes: string | null
+          order_id: string
+          product_id: string
+          quantity: number
+          subtotal: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          order_id: string
+          product_id: string
+          quantity?: number
+          subtotal: number
+          unit_price: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          order_id?: string
+          product_id?: string
+          quantity?: number
+          subtotal?: number
+          unit_price?: number
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
           created_at: string | null
           customer_id: string
+          delivery_address: string | null
+          delivery_notes: string | null
           id: string
           notes: string | null
           order_number: string | null
           restaurant_id: string
+          source: string | null
           status: string
           total_amount: number
           updated_at: string | null
@@ -259,10 +295,13 @@ export type Database = {
         Insert: {
           created_at?: string | null
           customer_id: string
+          delivery_address?: string | null
+          delivery_notes?: string | null
           id?: string
           notes?: string | null
           order_number?: string | null
           restaurant_id: string
+          source?: string | null
           status?: string
           total_amount: number
           updated_at?: string | null
@@ -270,10 +309,13 @@ export type Database = {
         Update: {
           created_at?: string | null
           customer_id?: string
+          delivery_address?: string | null
+          delivery_notes?: string | null
           id?: string
           notes?: string | null
           order_number?: string | null
           restaurant_id?: string
+          source?: string | null
           status?: string
           total_amount?: number
           updated_at?: string | null
@@ -294,6 +336,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      products: {
+        Row: {
+          available: boolean
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          name: string
+          price: number
+          restaurant_id: string
+          updated_at: string
+        }
+        Insert: {
+          available?: boolean
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name: string
+          price: number
+          restaurant_id: string
+          updated_at?: string
+        }
+        Update: {
+          available?: boolean
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name?: string
+          price?: number
+          restaurant_id?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       restaurants: {
         Row: {
