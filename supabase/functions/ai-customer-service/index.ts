@@ -22,7 +22,7 @@ serve(async (req) => {
 
     // Classify message intent
     const intentResponse = await fetch(
-      "https://api-inference.huggingface.co/models/facebook/bart-large-mnli",
+      "https://router.huggingface.co/hf-inference/models/facebook/bart-large-mnli",
       {
         headers: { 
           Authorization: `Bearer ${HF_TOKEN}`,
@@ -79,7 +79,7 @@ serve(async (req) => {
       const generationPrompt = `Você é um atendente simpático de um delivery de comida. O cliente ${customerName} disse: "${message}". Responda de forma educada, breve e útil em português brasileiro.`;
       
       const generationResponse = await fetch(
-        "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2",
+        "https://router.huggingface.co/hf-inference/models/mistralai/Mistral-7B-Instruct-v0.2",
         {
           headers: { 
             Authorization: `Bearer ${HF_TOKEN}`,
