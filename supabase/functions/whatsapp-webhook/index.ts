@@ -99,7 +99,7 @@ Se não for um pedido, retorne: {"isOrder": false, "orderNumber": null, "totalAm
       
       console.log('Order info extracted:', orderInfo);
 
-      if (orderInfo.isOrder && orderInfo.totalAmount) {
+      if (orderInfo.isOrder) {
         // Criar pedido automaticamente
         const { data: order, error: orderError } = await supabase
           .from('orders')
@@ -107,7 +107,7 @@ Se não for um pedido, retorne: {"isOrder": false, "orderNumber": null, "totalAm
             customer_id: customer.id,
             restaurant_id: customer.restaurant_id,
             order_number: orderInfo.orderNumber || `WPP-${Date.now()}`,
-            total_amount: orderInfo.totalAmount,
+            total_amount: orderInfo.totalAmount || 0,
             status: 'pending',
             notes: orderInfo.notes || `Pedido via WhatsApp: ${messageText}`,
           })
