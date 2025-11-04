@@ -1,16 +1,20 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, Users, CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Calendar, Clock, Users, CheckCircle2, XCircle, Loader2, X } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { toast } from "sonner";
 
 interface ScheduledMessagesListProps {
   restaurantId: string;
 }
 
 export function ScheduledMessagesList({ restaurantId }: ScheduledMessagesListProps) {
+  const queryClient = useQueryClient();
+
   const { data: scheduledMessages, isLoading } = useQuery({
     queryKey: ["scheduled-messages", restaurantId],
     queryFn: async () => {
@@ -27,6 +31,32 @@ export function ScheduledMessagesList({ restaurantId }: ScheduledMessagesListPro
     refetchInterval: 30000, // Atualizar a cada 30 segundos
   });
 
+  const cancelMessageMutation = useMutation({
+    mutationFn: async (messageId: string) => {
+      const { error } = await supabase
+        .from("scheduled_messages")
+        .update({ status: "cancelled" })
+        .eq("id", messageId)
+        .in("status", ["pending"]);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["scheduled-messages", restaurantId] });
+      toast.success("Mensagem cancelada com sucesso!");
+    },
+    onError: (error) => {
+      console.error("Erro ao cancelar mensagem:", error);
+      toast.error("Erro ao cancelar mensagem");
+    },
+  });
+
+  const handleCancel = (messageId: string) => {
+    if (confirm("Tem certeza que deseja cancelar esta mensagem agendada?")) {
+      cancelMessageMutation.mutate(messageId);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "pending":
@@ -37,6 +67,8 @@ export function ScheduledMessagesList({ restaurantId }: ScheduledMessagesListPro
         return <Badge variant="default" className="gap-1 bg-green-500"><CheckCircle2 className="h-3 w-3" />Concluído</Badge>;
       case "failed":
         return <Badge variant="destructive" className="gap-1"><XCircle className="h-3 w-3" />Erro</Badge>;
+      case "cancelled":
+        return <Badge variant="outline" className="gap-1"><XCircle className="h-3 w-3" />Cancelada</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -84,6 +116,17 @@ export function ScheduledMessagesList({ restaurantId }: ScheduledMessagesListPro
                   <span className="text-xs text-muted-foreground">
                     {format(new Date(msg.scheduled_for), "PPp", { locale: ptBR })}
                   </span>
+                  {msg.status === "pending" && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleCancel(msg.id)}
+                      disabled={cancelMessageMutation.isPending}
+                      className="h-6 w-6 p-0"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
                 
                 <p className="text-sm line-clamp-2">{msg.message}</p>

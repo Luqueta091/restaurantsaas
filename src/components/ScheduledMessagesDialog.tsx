@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Calendar, Clock, Send, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -21,6 +23,7 @@ export function ScheduledMessagesDialog({ restaurantId }: ScheduledMessagesDialo
   const [scheduledTime, setScheduledTime] = useState("");
   const [delaySeconds, setDelaySeconds] = useState("5");
   const [recipientFilter, setRecipientFilter] = useState("all");
+  const [selectedCustomers, setSelectedCustomers] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
 
   const { data: customers } = useQuery({
@@ -61,6 +64,8 @@ export function ScheduledMessagesDialog({ restaurantId }: ScheduledMessagesDialo
         filteredCustomers = filteredCustomers.filter(
           c => !c.last_order || new Date(c.last_order) < thirtyDaysAgo
         );
+      } else if (recipientFilter === "custom") {
+        filteredCustomers = filteredCustomers.filter(c => selectedCustomers.includes(c.id));
       }
 
       if (filteredCustomers.length === 0) {
@@ -106,11 +111,27 @@ export function ScheduledMessagesDialog({ restaurantId }: ScheduledMessagesDialo
       setMessage("");
       setScheduledDate("");
       setScheduledTime("");
+      setSelectedCustomers([]);
+      setRecipientFilter("all");
     } catch (error: any) {
       console.error("Erro ao agendar mensagem:", error);
       toast.error("Erro ao agendar mensagem");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const toggleCustomer = (customerId: string) => {
+    setSelectedCustomers((prev) =>
+      prev.includes(customerId) ? prev.filter((id) => id !== customerId) : [...prev, customerId]
+    );
+  };
+
+  const toggleAllCustomers = () => {
+    if (selectedCustomers.length === customers?.length) {
+      setSelectedCustomers([]);
+    } else {
+      setSelectedCustomers(customers?.map((c) => c.id) || []);
     }
   };
 
@@ -133,7 +154,13 @@ export function ScheduledMessagesDialog({ restaurantId }: ScheduledMessagesDialo
         <div className="space-y-4">
           <div>
             <Label htmlFor="recipients">Destinatários</Label>
-            <Select value={recipientFilter} onValueChange={setRecipientFilter}>
+            <Select
+              value={recipientFilter}
+              onValueChange={(value) => {
+                setRecipientFilter(value);
+                if (value !== "custom") setSelectedCustomers([]);
+              }}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -146,9 +173,42 @@ export function ScheduledMessagesDialog({ restaurantId }: ScheduledMessagesDialo
                 </SelectItem>
                 <SelectItem value="recent">Clientes ativos (últimos 30 dias)</SelectItem>
                 <SelectItem value="inactive">Clientes inativos (+30 dias)</SelectItem>
+                <SelectItem value="custom">Selecionar clientes específicos</SelectItem>
               </SelectContent>
             </Select>
           </div>
+
+          {recipientFilter === "custom" && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Clientes ({selectedCustomers.length} selecionados)</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={toggleAllCustomers}
+                >
+                  {selectedCustomers.length === customers?.length ? "Desmarcar" : "Selecionar"} todos
+                </Button>
+              </div>
+              <ScrollArea className="h-48 border rounded-md p-4">
+                <div className="space-y-2">
+                  {customers?.map((customer) => (
+                    <div key={customer.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={customer.id}
+                        checked={selectedCustomers.includes(customer.id)}
+                        onCheckedChange={() => toggleCustomer(customer.id)}
+                      />
+                      <Label htmlFor={customer.id} className="cursor-pointer text-sm flex-1">
+                        {customer.name} - {customer.phone}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            </div>
+          )}
 
           <div>
             <Label htmlFor="message">Mensagem</Label>
