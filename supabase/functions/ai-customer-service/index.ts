@@ -55,7 +55,7 @@ Mensagem do cliente ${customerName}: "${message}"<|im_end|>
 <|im_start|>assistant`;
 
     const aiResponse = await fetch(
-      'https://api-inference.huggingface.co/models/Qwen/Qwen2.5-7B-Instruct',
+      'https://router.huggingface.co/hf-inference/models/Qwen/Qwen2.5-7B-Instruct',
       {
         headers: {
           'Authorization': `Bearer ${HF_TOKEN}`,
