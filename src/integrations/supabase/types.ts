@@ -406,6 +406,90 @@ export type Database = {
         }
         Relationships: []
       }
+      scheduled_message_recipients: {
+        Row: {
+          created_at: string | null
+          customer_id: string
+          error_message: string | null
+          id: string
+          scheduled_message_id: string
+          sent_at: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string | null
+          customer_id: string
+          error_message?: string | null
+          id?: string
+          scheduled_message_id: string
+          sent_at?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string | null
+          customer_id?: string
+          error_message?: string | null
+          id?: string
+          scheduled_message_id?: string
+          sent_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
+      scheduled_messages: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          created_by: string | null
+          delay_seconds: number | null
+          failed_count: number | null
+          id: string
+          media_url: string | null
+          message: string
+          restaurant_id: string
+          scheduled_for: string
+          sent_count: number | null
+          status: string
+          template_name: string | null
+          total_recipients: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          delay_seconds?: number | null
+          failed_count?: number | null
+          id?: string
+          media_url?: string | null
+          message: string
+          restaurant_id: string
+          scheduled_for: string
+          sent_count?: number | null
+          status?: string
+          template_name?: string | null
+          total_recipients?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          delay_seconds?: number | null
+          failed_count?: number | null
+          id?: string
+          media_url?: string | null
+          message?: string
+          restaurant_id?: string
+          scheduled_for?: string
+          sent_count?: number | null
+          status?: string
+          template_name?: string | null
+          total_recipients?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

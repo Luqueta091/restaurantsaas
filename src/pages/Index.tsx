@@ -11,6 +11,8 @@ import { AIFeatures } from "@/components/AIFeatures";
 import { SendMessageDialog } from "@/components/SendMessageDialog";
 import { OrderDialog } from "@/components/OrderDialog";
 import { OrderHistory } from "@/components/OrderHistory";
+import { ScheduledMessagesDialog } from "@/components/ScheduledMessagesDialog";
+import { ScheduledMessagesList } from "@/components/ScheduledMessagesList";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -242,13 +244,16 @@ const Index = () => {
               Bem-vindo ao seu painel de gestão
             </p>
           </div>
-          <Button
-            onClick={() => setShowNewCustomerDialog(true)}
-            className="bg-gradient-primary hover:opacity-90"
-          >
-            <UserPlus className="w-4 h-4 mr-2" />
-            Novo Cliente
-          </Button>
+          <div className="flex gap-2">
+            <ScheduledMessagesDialog restaurantId={restaurant?.id || ""} />
+            <Button
+              onClick={() => setShowNewCustomerDialog(true)}
+              className="bg-gradient-primary hover:opacity-90"
+            >
+              <UserPlus className="w-4 h-4 mr-2" />
+              Novo Cliente
+            </Button>
+          </div>
         </div>
 
         <DashboardStats
@@ -267,6 +272,8 @@ const Index = () => {
           />
           <RecentMessages messages={messages} />
         </div>
+
+        <ScheduledMessagesList restaurantId={restaurant?.id || ""} />
 
         <AIFeatures />
       </main>
