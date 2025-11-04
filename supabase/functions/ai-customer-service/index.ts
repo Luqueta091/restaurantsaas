@@ -12,104 +12,86 @@ serve(async (req) => {
 
   try {
     const { message, customerName } = await req.json();
-    const HF_TOKEN = Deno.env.get('HUGGING_FACE_ACCESS_TOKEN');
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
 
-    if (!HF_TOKEN) {
-      throw new Error('HUGGING_FACE_ACCESS_TOKEN not configured');
+    console.log('Processing message with Lovable AI:', message);
+
+    // Use Lovable AI to classify intent and generate response
+    const aiPrompt = `Você é um assistente de atendimento ao cliente de um delivery de comida.
+
+Analise a mensagem do cliente e identifique a intenção principal:
+- fazer_pedido: cliente quer fazer um pedido
+- reclamacao: cliente está reclamando
+- elogio: cliente está elogiando
+- horario: pergunta sobre horário de funcionamento
+- promocao: pergunta sobre promoções
+- endereco: pergunta sobre endereço/localização
+- pagamento: pergunta sobre formas de pagamento
+- status_pedido: pergunta sobre status do pedido
+- outro: outras intenções
+
+Mensagem do cliente ${customerName}: "${message}"
+
+Responda em JSON com:
+{
+  "intent": "uma das opções acima",
+  "confidence": número entre 0 e 1,
+  "response": "resposta amigável e útil em português"
+}
+
+Regras para a resposta:
+- Se for fazer_pedido: pergunte o que deseja
+- Se for reclamacao: peça desculpas e ofereça ajuda
+- Se for elogio: agradeça carinhosamente
+- Se for horario: informe "segunda a sexta 11h-23h, finais de semana 12h-00h"
+- Se for promocao: mencione promoções semanais
+- Se for status_pedido: ofereça verificar o pedido
+- Seja breve, simpático e use emojis apropriados`;
+
+    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          { role: 'user', content: aiPrompt }
+        ],
+      }),
+    });
+
+    if (!aiResponse.ok) {
+      const errorText = await aiResponse.text();
+      console.error('Lovable AI error:', aiResponse.status, errorText);
+      throw new Error(`Lovable AI error: ${aiResponse.status}`);
     }
 
-    console.log('Processing message with HuggingFace:', message);
-
-    // Classify message intent
-    const intentResponse = await fetch(
-      "https://router.huggingface.co/hf-inference/models/facebook/bart-large-mnli",
-      {
-        headers: { 
-          Authorization: `Bearer ${HF_TOKEN}`,
-          'Content-Type': 'application/json'
-        },
-        method: "POST",
-        body: JSON.stringify({
-          inputs: message,
-          parameters: {
-            candidate_labels: [
-              "fazer pedido",
-              "reclamação",
-              "elogio",
-              "horário de funcionamento",
-              "promoção",
-              "endereço",
-              "forma de pagamento",
-              "status do pedido"
-            ],
-          },
-        }),
-      }
-    );
-
-    if (!intentResponse.ok) {
-      const errorText = await intentResponse.text();
-      console.error('HuggingFace intent error:', intentResponse.status, errorText);
-      throw new Error(`HuggingFace API error: ${intentResponse.status}`);
-    }
-
-    const intentData = await intentResponse.json();
-    const topIntent = intentData?.labels?.[0] || 'unknown';
-    const confidence = intentData?.scores?.[0] || 0;
-
-    console.log('Intent detected:', topIntent, 'Confidence:', confidence);
-
-    let responseText = '';
-
-    // Generate responses based on intent
-    if (topIntent === "fazer pedido") {
-      responseText = `Olá ${customerName}! 🍕 Que ótimo que quer fazer um pedido! Pode me dizer o que gostaria?`;
-    } else if (topIntent === "reclamação") {
-      responseText = `Olá ${customerName}, sinto muito pelo inconveniente. 😔 Pode me contar o que aconteceu para eu resolver rapidamente?`;
-    } else if (topIntent === "elogio") {
-      responseText = `Muito obrigado pelo carinho, ${customerName}! 🥰 Ficamos muito felizes em saber que você gostou!`;
-    } else if (topIntent === "horário de funcionamento") {
-      responseText = `Olá ${customerName}! Nosso horário de funcionamento é de segunda a sexta das 11h às 23h, e finais de semana das 12h às 00h. 🕐`;
-    } else if (topIntent === "promoção") {
-      responseText = `Oi ${customerName}! 🎉 Temos promoções especiais toda semana! Quer que eu te envie nosso cardápio com os preços?`;
-    } else if (topIntent === "status do pedido") {
-      responseText = `Olá ${customerName}! Vou verificar o status do seu pedido. Um momento por favor... ⏳`;
-    } else {
-      // Use text generation model for other cases
-      const generationPrompt = `Você é um atendente simpático de um delivery de comida. O cliente ${customerName} disse: "${message}". Responda de forma educada, breve e útil em português brasileiro.`;
-      
-      const generationResponse = await fetch(
-        "https://router.huggingface.co/hf-inference/models/mistralai/Mistral-7B-Instruct-v0.2",
-        {
-          headers: { 
-            Authorization: `Bearer ${HF_TOKEN}`,
-            'Content-Type': 'application/json'
-          },
-          method: "POST",
-          body: JSON.stringify({ 
-            inputs: generationPrompt,
-            parameters: {
-              max_new_tokens: 150,
-              temperature: 0.7,
-              return_full_text: false
-            }
-          }),
-        }
-      );
-
-      if (generationResponse.ok) {
-        const generationData = await generationResponse.json();
-        responseText = generationData[0]?.generated_text || `Olá ${customerName}! Como posso te ajudar hoje?`;
-      } else {
-        responseText = `Olá ${customerName}! Como posso te ajudar hoje?`;
+    const aiData = await aiResponse.json();
+    const aiContent = aiData.choices[0].message.content;
+    
+    // Parse JSON response
+    let jsonText = aiContent.trim();
+    if (jsonText.startsWith('```')) {
+      const lines = jsonText.split('\n');
+      jsonText = lines.slice(1, -1).join('\n');
+      if (jsonText.startsWith('json')) {
+        jsonText = jsonText.substring(4).trim();
       }
     }
+    
+    const result = JSON.parse(jsonText);
+    
+    console.log('AI Analysis:', result);
+
+    const responseText = result.response || `Olá ${customerName}! Como posso te ajudar hoje?`;
 
     return new Response(
       JSON.stringify({ 
         success: true,
-        intent: topIntent,
-        confidence: confidence,
+        intent: result.intent,
+        confidence: result.confidence,
         response: responseText
       }),
       { 
