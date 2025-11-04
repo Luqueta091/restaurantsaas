@@ -41,13 +41,19 @@ serve(async (req) => {
       throw new Error('Restaurante não encontrado');
     }
 
+    // Verificar se o restaurante tem instance name configurado
+    if (!restaurant.evolution_instance_name) {
+      throw new Error('Instance name da Evolution API não configurado para este restaurante. Configure nas Configurações.');
+    }
+
     // Obter credenciais da Evolution API
     let EVOLUTION_API_URL = Deno.env.get('EVOLUTION_API_URL');
     const EVOLUTION_API_TOKEN = Deno.env.get('EVOLUTION_API_TOKEN');
-    const EVOLUTION_INSTANCE_NAME = Deno.env.get('EVOLUTION_INSTANCE_NAME');
+    // Usar o instance name do restaurante ao invés do global
+    const EVOLUTION_INSTANCE_NAME = restaurant.evolution_instance_name;
 
-    if (!EVOLUTION_API_URL || !EVOLUTION_API_TOKEN || !EVOLUTION_INSTANCE_NAME) {
-      throw new Error('Credenciais da Evolution API não configuradas');
+    if (!EVOLUTION_API_URL || !EVOLUTION_API_TOKEN) {
+      throw new Error('Credenciais da Evolution API não configuradas no sistema');
     }
 
     // Garantir que a URL tenha o protocolo https://

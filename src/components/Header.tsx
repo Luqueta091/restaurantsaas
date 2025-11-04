@@ -8,9 +8,12 @@ import { SettingsDialog } from "./SettingsDialog";
 
 interface HeaderProps {
   restaurantName?: string;
+  restaurantId?: string;
+  evolutionInstanceName?: string;
+  onSettingsSaved?: () => void;
 }
 
-export const Header = ({ restaurantName }: HeaderProps) => {
+export const Header = ({ restaurantName, restaurantId, evolutionInstanceName, onSettingsSaved }: HeaderProps) => {
   const navigate = useNavigate();
   const [showSettings, setShowSettings] = useState(false);
 
@@ -60,7 +63,13 @@ export const Header = ({ restaurantName }: HeaderProps) => {
         </div>
       </div>
       
-      <SettingsDialog open={showSettings} onOpenChange={setShowSettings} />
+      <SettingsDialog 
+        open={showSettings} 
+        onOpenChange={setShowSettings} 
+        restaurantId={restaurantId || ""}
+        currentInstanceName={evolutionInstanceName}
+        onSuccess={onSettingsSaved}
+      />
     </header>
   );
 };

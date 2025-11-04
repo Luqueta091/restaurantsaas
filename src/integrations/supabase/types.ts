@@ -247,6 +247,7 @@ export type Database = {
       restaurants: {
         Row: {
           created_at: string | null
+          evolution_instance_name: string | null
           id: string
           name: string
           owner_id: string | null
@@ -255,6 +256,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          evolution_instance_name?: string | null
           id?: string
           name: string
           owner_id?: string | null
@@ -263,6 +265,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          evolution_instance_name?: string | null
           id?: string
           name?: string
           owner_id?: string | null

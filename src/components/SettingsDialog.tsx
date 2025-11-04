@@ -4,32 +4,45 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, Check, AlertCircle } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { supabase } from "@/integrations/supabase/client";
 
 interface SettingsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  restaurantId: string;
+  currentInstanceName?: string;
+  onSuccess?: () => void;
 }
 
-export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
+export const SettingsDialog = ({ open, onOpenChange, restaurantId, currentInstanceName, onSuccess }: SettingsDialogProps) => {
   const [loading, setLoading] = useState(false);
-  const [settings, setSettings] = useState({
-    evolutionApiUrl: "",
-    evolutionApiToken: "",
-    evolutionInstanceName: "",
-  });
+  const [instanceName, setInstanceName] = useState("");
+
+  useEffect(() => {
+    if (currentInstanceName) {
+      setInstanceName(currentInstanceName);
+    }
+  }, [currentInstanceName]);
 
   const handleSave = async () => {
+    if (!instanceName.trim()) {
+      toast.error("Por favor, preencha o nome da instância");
+      return;
+    }
+
     setLoading(true);
     try {
-      // Aqui você pode adicionar lógica para salvar as configurações
-      // Por enquanto, apenas mostra uma mensagem
-      toast.success("As configurações da Evolution API estão prontas!");
-      
-      // Simular salvamento
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      const { error } = await supabase
+        .from('restaurants')
+        .update({ evolution_instance_name: instanceName.trim() })
+        .eq('id', restaurantId);
+
+      if (error) throw error;
+
+      toast.success("Configurações salvas com sucesso!");
+      onSuccess?.();
       onOpenChange(false);
     } catch (error: any) {
       toast.error("Erro ao salvar configurações: " + error.message);
@@ -42,92 +55,61 @@ export const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>Configurações da Evolution API</DialogTitle>
+          <DialogTitle>Configurações do WhatsApp</DialogTitle>
           <DialogDescription>
-            Configure as credenciais da Evolution API para enviar mensagens via WhatsApp
+            Configure o nome da instância da Evolution API para o seu restaurante
           </DialogDescription>
         </DialogHeader>
 
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            As variáveis de ambiente da Evolution API já foram configuradas no backend (Lovable Cloud). Certifique-se de que os valores estão corretos:
+            Configure o nome da instância da Evolution API para o seu restaurante. Cada restaurante pode usar um número de WhatsApp diferente.
           </AlertDescription>
         </Alert>
 
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="evolutionApiUrl" className="flex items-center gap-2">
-              <Check className="w-4 h-4 text-green-600" />
-              EVOLUTION_API_URL
-            </Label>
-            <Input
-              id="evolutionApiUrl"
-              placeholder="https://sua-evolution-api.railway.app"
-              value={settings.evolutionApiUrl}
-              onChange={(e) =>
-                setSettings({ ...settings, evolutionApiUrl: e.target.value })
-              }
-              className="font-mono text-sm"
-              disabled
-            />
-            <p className="text-xs text-muted-foreground">
-              URL da sua Evolution API hospedada no Railway
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="evolutionApiToken" className="flex items-center gap-2">
-              <Check className="w-4 h-4 text-green-600" />
-              EVOLUTION_API_TOKEN
-            </Label>
-            <Input
-              id="evolutionApiToken"
-              type="password"
-              placeholder="••••••••••••••••"
-              value={settings.evolutionApiToken}
-              onChange={(e) =>
-                setSettings({ ...settings, evolutionApiToken: e.target.value })
-              }
-              className="font-mono text-sm"
-              disabled
-            />
-            <p className="text-xs text-muted-foreground">
-              Token de autenticação da Evolution API
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="evolutionInstanceName" className="flex items-center gap-2">
-              <Check className="w-4 h-4 text-green-600" />
-              EVOLUTION_INSTANCE_NAME
+            <Label htmlFor="evolutionInstanceName">
+              Nome da Instância da Evolution API *
             </Label>
             <Input
               id="evolutionInstanceName"
-              placeholder="minha-instancia"
-              value={settings.evolutionInstanceName}
-              onChange={(e) =>
-                setSettings({ ...settings, evolutionInstanceName: e.target.value })
-              }
+              placeholder="Ex: main, restaurante-silva, etc"
+              value={instanceName}
+              onChange={(e) => setInstanceName(e.target.value)}
               className="font-mono text-sm"
-              disabled
             />
             <p className="text-xs text-muted-foreground">
-              Nome da instância do WhatsApp na Evolution API
+              Este é o nome da sua instância do WhatsApp na Evolution API. Cada instância corresponde a um número de WhatsApp diferente.
             </p>
           </div>
         </div>
 
         <Alert className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
           <AlertDescription className="text-sm">
-            <strong>✅ Configuração Atual:</strong> As variáveis já estão configuradas no Lovable Cloud (Secrets). 
-            Para alterá-las, você precisa acessar as configurações do projeto no Lovable.
+            <strong>ℹ️ Como funciona:</strong>
+            <ul className="mt-2 space-y-1 list-disc list-inside text-xs">
+              <li>A URL e Token da Evolution API são compartilhados (configurados no sistema)</li>
+              <li>Cada restaurante tem seu próprio Instance Name</li>
+              <li>Cada Instance Name corresponde a um número de WhatsApp diferente</li>
+            </ul>
           </AlertDescription>
         </Alert>
 
         <div className="flex gap-2 justify-end pt-4">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Fechar
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+            Cancelar
+          </Button>
+          <Button onClick={handleSave} disabled={loading} className="bg-gradient-primary">
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Salvando...
+              </>
+            ) : (
+              "Salvar Configurações"
+            )}
           </Button>
         </div>
       </DialogContent>

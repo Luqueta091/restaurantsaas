@@ -191,7 +191,12 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/10 to-background">
-      <Header restaurantName={restaurant?.name} />
+      <Header 
+        restaurantName={restaurant?.name} 
+        restaurantId={restaurant?.id}
+        evolutionInstanceName={restaurant?.evolution_instance_name}
+        onSettingsSaved={loadRestaurantData}
+      />
       
       <main className="container mx-auto px-4 py-8 space-y-8">
         <div className="flex items-center justify-between">
