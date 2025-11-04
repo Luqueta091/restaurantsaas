@@ -87,7 +87,15 @@ Se não for um pedido, retorne: {"isOrder": false, "orderNumber": null, "totalAm
       console.log('AI Response:', aiData);
 
       const aiMessage = aiData.choices[0].message.content;
-      const orderInfo = JSON.parse(aiMessage);
+      
+      // Extrair JSON de dentro de blocos markdown se necessário
+      let jsonText = aiMessage.trim();
+      if (jsonText.startsWith('```')) {
+        const lines = jsonText.split('\n');
+        jsonText = lines.slice(1, -1).join('\n');
+      }
+      
+      const orderInfo = JSON.parse(jsonText);
       
       console.log('Order info extracted:', orderInfo);
 
