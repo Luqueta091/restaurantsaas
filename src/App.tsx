@@ -6,13 +6,18 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import Products from "./pages/Products";
+import Menu from "./pages/Menu";
 import NotFound from "./pages/NotFound";
 
-// Lazy load para evitar conflitos de módulo
-const Products = React.lazy(() => import("./pages/Products"));
-const Menu = React.lazy(() => import("./pages/Menu"));
-
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000,
+      retry: 1,
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -20,16 +25,14 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <React.Suspense fallback={<div className="flex items-center justify-center min-h-screen">Carregando...</div>}>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/produtos" element={<Products />} />
-            <Route path="/cardapio/:restaurantId" element={<Menu />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </React.Suspense>
+        <Routes>
+          <Route path="/" element={<Index />} />
+          <Route path="/auth" element={<Auth />} />
+          <Route path="/produtos" element={<Products />} />
+          <Route path="/cardapio/:restaurantId" element={<Menu />} />
+          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
