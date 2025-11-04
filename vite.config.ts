@@ -8,6 +8,17 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    hmr: {
+      clientPort: 443,
+    },
+  },
+  preview: {
+    host: "0.0.0.0",
+    port: 8080,
+    allowedHosts: [
+      "restaurantsaas-production.up.railway.app",
+      ".railway.app"
+    ],
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {
