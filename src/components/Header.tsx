@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { ChefHat, LogOut } from "lucide-react";
+import { ChefHat, LogOut, Settings } from "lucide-react";
+import { SettingsDialog } from "./SettingsDialog";
 
 interface HeaderProps {
   restaurantName?: string;
@@ -10,6 +12,7 @@ interface HeaderProps {
 
 export const Header = ({ restaurantName }: HeaderProps) => {
   const navigate = useNavigate();
+  const [showSettings, setShowSettings] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -35,16 +38,29 @@ export const Header = ({ restaurantName }: HeaderProps) => {
             )}
           </div>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleLogout}
-          className="gap-2"
-        >
-          <LogOut className="w-4 h-4" />
-          Sair
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowSettings(true)}
+            className="gap-2"
+          >
+            <Settings className="w-4 h-4" />
+            Configurações
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleLogout}
+            className="gap-2"
+          >
+            <LogOut className="w-4 h-4" />
+            Sair
+          </Button>
+        </div>
       </div>
+      
+      <SettingsDialog open={showSettings} onOpenChange={setShowSettings} />
     </header>
   );
 };
