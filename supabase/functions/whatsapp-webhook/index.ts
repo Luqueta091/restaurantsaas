@@ -159,11 +159,16 @@ async function handleMessage(payload: any) {
         
         // Enviar resposta automática de volta ao cliente
         if (aiResponse?.response) {
-          const evolutionApiUrl = Deno.env.get('EVOLUTION_API_URL');
+          let evolutionApiUrl = Deno.env.get('EVOLUTION_API_URL');
           const evolutionApiToken = Deno.env.get('EVOLUTION_API_TOKEN');
           const instanceName = Deno.env.get('EVOLUTION_INSTANCE_NAME');
           
           if (evolutionApiUrl && evolutionApiToken && instanceName) {
+            // Adicionar https:// se não tiver protocolo
+            if (!evolutionApiUrl.startsWith('http://') && !evolutionApiUrl.startsWith('https://')) {
+              evolutionApiUrl = `https://${evolutionApiUrl}`;
+            }
+            
             const sendMessageResponse = await fetch(
               `${evolutionApiUrl}/message/sendText/${instanceName}`,
               {
