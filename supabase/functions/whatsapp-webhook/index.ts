@@ -63,19 +63,25 @@ Responda APENAS com um JSON válido neste formato:
 
 Se não for um pedido, retorne: {"isOrder": false, "orderNumber": null, "totalAmount": null, "notes": null}`;
 
-      const aiResponse = await fetch('https://api.lovable.app/v1/ai/chat', {
+      const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${lovableApiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'openai/gpt-5-mini',
+          model: 'google/gemini-2.5-flash',
           messages: [
             { role: 'user', content: aiPrompt }
           ],
         }),
       });
+
+      if (!aiResponse.ok) {
+        const errorText = await aiResponse.text();
+        console.error('AI API error:', aiResponse.status, errorText);
+        throw new Error(`AI API failed: ${aiResponse.status}`);
+      }
 
       const aiData = await aiResponse.json();
       console.log('AI Response:', aiData);
