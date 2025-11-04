@@ -18,12 +18,12 @@ serve(async (req) => {
 
     console.log("Iniciando processamento de mensagens agendadas...");
 
-    // Buscar mensagens pendentes que já estão no horário de envio
+    // Buscar mensagens pendentes ou em processamento que já estão no horário de envio
     const now = new Date().toISOString();
     const { data: pendingMessages, error: fetchError } = await supabase
       .from("scheduled_messages")
       .select("*")
-      .eq("status", "pending")
+      .in("status", ["pending", "processing"])
       .lte("scheduled_for", now)
       .order("scheduled_for", { ascending: true });
 
@@ -51,12 +51,12 @@ serve(async (req) => {
         .update({ status: "processing" })
         .eq("id", message.id);
 
-      // Buscar destinatários pendentes
+      // Buscar destinatários pendentes ou que falharam mas ainda podem ter retry
       const { data: recipients, error: recipientsError } = await supabase
         .from("scheduled_message_recipients")
         .select("*, customers(*)")
         .eq("scheduled_message_id", message.id)
-        .eq("status", "pending");
+        .or(`status.eq.pending,and(status.eq.failed,retry_count.lt.3)`);
 
       if (recipientsError) {
         console.error("Erro ao buscar destinatários:", recipientsError);
@@ -69,7 +69,21 @@ serve(async (req) => {
       // Processar cada destinatário
       for (const recipient of recipients || []) {
         try {
-          console.log(`Enviando para cliente ${recipient.customer_id}...`);
+          const retryCount = recipient.retry_count || 0;
+          
+          // Se é um retry, verificar se já passou tempo suficiente (backoff exponencial)
+          if (recipient.status === "failed" && recipient.last_retry_at) {
+            const lastRetry = new Date(recipient.last_retry_at);
+            const now = new Date();
+            const waitTime = Math.pow(2, retryCount) * 60 * 1000; // 1min, 2min, 4min
+            
+            if (now.getTime() - lastRetry.getTime() < waitTime) {
+              console.log(`Aguardando para retry do cliente ${recipient.customer_id} (tentativa ${retryCount + 1})`);
+              continue;
+            }
+          }
+
+          console.log(`Enviando para cliente ${recipient.customer_id} (tentativa ${retryCount + 1})...`);
 
           // Chamar função de envio de WhatsApp
           const { error: sendError } = await supabase.functions.invoke("send-whatsapp", {
@@ -84,14 +98,25 @@ serve(async (req) => {
 
           if (sendError) {
             console.error(`Erro ao enviar para ${recipient.customer_id}:`, sendError);
+            const newRetryCount = retryCount + 1;
+            const isFinalFailure = newRetryCount >= 3;
+            
             failedCount++;
             await supabase
               .from("scheduled_message_recipients")
               .update({
-                status: "failed",
+                status: isFinalFailure ? "failed" : "pending",
                 error_message: sendError.message,
+                retry_count: newRetryCount,
+                last_retry_at: new Date().toISOString(),
               })
               .eq("id", recipient.id);
+              
+            if (isFinalFailure) {
+              console.log(`Falha definitiva após 3 tentativas para ${recipient.customer_id}`);
+            } else {
+              console.log(`Reagendando retry ${newRetryCount} para ${recipient.customer_id}`);
+            }
           } else {
             console.log(`Enviado com sucesso para ${recipient.customer_id}`);
             sentCount++;
@@ -111,19 +136,31 @@ serve(async (req) => {
           }
         } catch (error: any) {
           console.error(`Erro ao processar destinatário ${recipient.id}:`, error);
+          const retryCount = (recipient.retry_count || 0) + 1;
+          const isFinalFailure = retryCount >= 3;
+          
           failedCount++;
           await supabase
             .from("scheduled_message_recipients")
             .update({
-              status: "failed",
+              status: isFinalFailure ? "failed" : "pending",
               error_message: error.message,
+              retry_count: retryCount,
+              last_retry_at: new Date().toISOString(),
             })
             .eq("id", recipient.id);
         }
       }
 
-      // Atualizar status da mensagem agendada
-      const allProcessed = sentCount + failedCount === message.total_recipients;
+      // Verificar se ainda há destinatários pendentes ou aguardando retry
+      const { data: pendingRecipients } = await supabase
+        .from("scheduled_message_recipients")
+        .select("id")
+        .eq("scheduled_message_id", message.id)
+        .or(`status.eq.pending,and(status.eq.failed,retry_count.lt.3)`);
+
+      const allProcessed = !pendingRecipients || pendingRecipients.length === 0;
+      
       await supabase
         .from("scheduled_messages")
         .update({

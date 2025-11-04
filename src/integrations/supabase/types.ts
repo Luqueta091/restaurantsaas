@@ -412,6 +412,8 @@ export type Database = {
           customer_id: string
           error_message: string | null
           id: string
+          last_retry_at: string | null
+          retry_count: number | null
           scheduled_message_id: string
           sent_at: string | null
           status: string
@@ -421,6 +423,8 @@ export type Database = {
           customer_id: string
           error_message?: string | null
           id?: string
+          last_retry_at?: string | null
+          retry_count?: number | null
           scheduled_message_id: string
           sent_at?: string | null
           status?: string
@@ -430,6 +434,8 @@ export type Database = {
           customer_id?: string
           error_message?: string | null
           id?: string
+          last_retry_at?: string | null
+          retry_count?: number | null
           scheduled_message_id?: string
           sent_at?: string | null
           status?: string

@@ -146,6 +146,12 @@ export function ScheduledMessagesList({ restaurantId }: ScheduledMessagesListPro
                       {msg.failed_count} falhas
                     </div>
                   )}
+                  {msg.status === "processing" && (
+                    <div className="flex items-center gap-1 text-yellow-600">
+                      <Clock className="h-3 w-3 animate-pulse" />
+                      Processando retries...
+                    </div>
+                  )}
                   {msg.delay_seconds > 0 && (
                     <div className="flex items-center gap-1">
                       <Clock className="h-3 w-3" />
