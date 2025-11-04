@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.process-scheduled-messages]
 verify_jwt = false
+
+[functions.ai-customer-service]
+verify_jwt = false

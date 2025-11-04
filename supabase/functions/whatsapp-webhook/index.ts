@@ -141,14 +141,64 @@ async function handleMessage(payload: any) {
       }
     }
 
+    // Processar mensagem com IA do Hugging Face
+    console.log('Processing message with AI customer service');
+    
+    try {
+      const { data: aiResponse, error: aiError } = await supabase.functions.invoke('ai-customer-service', {
+        body: { 
+          message: messageText,
+          customerName: customer.name 
+        }
+      });
+
+      if (aiError) {
+        console.error('AI service error:', aiError);
+      } else {
+        console.log('AI Response:', aiResponse);
+        
+        // Enviar resposta automática de volta ao cliente
+        if (aiResponse?.response) {
+          const evolutionApiUrl = Deno.env.get('EVOLUTION_API_URL');
+          const evolutionApiToken = Deno.env.get('EVOLUTION_API_TOKEN');
+          const instanceName = Deno.env.get('EVOLUTION_INSTANCE_NAME');
+          
+          if (evolutionApiUrl && evolutionApiToken && instanceName) {
+            const sendMessageResponse = await fetch(
+              `${evolutionApiUrl}/message/sendText/${instanceName}`,
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'apikey': evolutionApiToken,
+                },
+                body: JSON.stringify({
+                  number: phoneNumber,
+                  text: aiResponse.response,
+                }),
+              }
+            );
+            
+            if (sendMessageResponse.ok) {
+              console.log('AI response sent to customer');
+            } else {
+              console.error('Failed to send AI response:', await sendMessageResponse.text());
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error calling AI service:', error);
+    }
+
     // FILTRO 2: Verificar se tem palavras-chave de pedido
     if (!hasOrderKeywords(messageText)) {
-      console.log('No order keywords detected - skipping AI analysis');
+      console.log('No order keywords detected - skipping order creation');
       return;
     }
 
-    // CAMINHO 2: Mensagem do cliente com palavras-chave (USA IA)
-    console.log('Order keywords detected - analyzing with AI');
+    // CAMINHO 2: Mensagem do cliente com palavras-chave (USA IA para criar pedido)
+    console.log('Order keywords detected - analyzing with AI for order creation');
     
     const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
     
