@@ -42,12 +42,17 @@ serve(async (req) => {
     }
 
     // Obter credenciais da Evolution API
-    const EVOLUTION_API_URL = Deno.env.get('EVOLUTION_API_URL');
+    let EVOLUTION_API_URL = Deno.env.get('EVOLUTION_API_URL');
     const EVOLUTION_API_TOKEN = Deno.env.get('EVOLUTION_API_TOKEN');
     const EVOLUTION_INSTANCE_NAME = Deno.env.get('EVOLUTION_INSTANCE_NAME');
 
     if (!EVOLUTION_API_URL || !EVOLUTION_API_TOKEN || !EVOLUTION_INSTANCE_NAME) {
       throw new Error('Credenciais da Evolution API não configuradas');
+    }
+
+    // Garantir que a URL tenha o protocolo https://
+    if (!EVOLUTION_API_URL.startsWith('http://') && !EVOLUTION_API_URL.startsWith('https://')) {
+      EVOLUTION_API_URL = 'https://' + EVOLUTION_API_URL;
     }
 
     console.log('=== Iniciando envio via Evolution API ===');
