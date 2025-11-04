@@ -1,4 +1,4 @@
-FROM node:20-slim
+
 
 # Instala dependências do sistema necessárias
 RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
