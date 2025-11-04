@@ -12,12 +12,17 @@ serve(async (req) => {
 
   try {
     const { message, customerName } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    const HF_TOKEN = Deno.env.get('HUGGING_FACE_ACCESS_TOKEN');
 
-    console.log('Processing message with Lovable AI:', message);
+    if (!HF_TOKEN) {
+      throw new Error('HUGGING_FACE_ACCESS_TOKEN not configured');
+    }
 
-    // Use Lovable AI to classify intent and generate response
-    const aiPrompt = `Você é um assistente de atendimento ao cliente de um delivery de comida.
+    console.log('Processing message with Qwen3-8B:', message);
+
+    // Use Qwen3-8B for intent classification and response generation
+    const aiPrompt = `<|im_start|>system
+Você é um assistente de atendimento ao cliente de um delivery de comida.
 
 Analise a mensagem do cliente e identifique a intenção principal:
 - fazer_pedido: cliente quer fazer um pedido
@@ -30,58 +35,91 @@ Analise a mensagem do cliente e identifique a intenção principal:
 - status_pedido: pergunta sobre status do pedido
 - outro: outras intenções
 
-Mensagem do cliente ${customerName}: "${message}"
-
-Responda em JSON com:
+Responda APENAS em JSON válido com:
 {
   "intent": "uma das opções acima",
   "confidence": número entre 0 e 1,
-  "response": "resposta amigável e útil em português"
+  "response": "resposta amigável e útil em português brasileiro"
 }
 
 Regras para a resposta:
-- Se for fazer_pedido: pergunte o que deseja
-- Se for reclamacao: peça desculpas e ofereça ajuda
+- Se for fazer_pedido: pergunte o que deseja com entusiasmo
+- Se for reclamacao: peça desculpas e ofereça ajuda imediata
 - Se for elogio: agradeça carinhosamente
 - Se for horario: informe "segunda a sexta 11h-23h, finais de semana 12h-00h"
-- Se for promocao: mencione promoções semanais
+- Se for promocao: mencione promoções semanais e ofereça cardápio
 - Se for status_pedido: ofereça verificar o pedido
-- Seja breve, simpático e use emojis apropriados`;
+- Seja breve, simpático e use emojis apropriados<|im_end|>
+<|im_start|>user
+Mensagem do cliente ${customerName}: "${message}"<|im_end|>
+<|im_start|>assistant`;
 
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-pro',
-        messages: [
-          { role: 'user', content: aiPrompt }
-        ],
-      }),
-    });
+    const aiResponse = await fetch(
+      'https://api-inference.huggingface.co/models/Qwen/Qwen2.5-7B-Instruct',
+      {
+        headers: {
+          'Authorization': `Bearer ${HF_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+        method: 'POST',
+        body: JSON.stringify({
+          inputs: aiPrompt,
+          parameters: {
+            max_new_tokens: 300,
+            temperature: 0.7,
+            top_p: 0.9,
+            do_sample: true,
+            return_full_text: false,
+          },
+        }),
+      }
+    );
 
     if (!aiResponse.ok) {
       const errorText = await aiResponse.text();
-      console.error('Lovable AI error:', aiResponse.status, errorText);
-      throw new Error(`Lovable AI error: ${aiResponse.status}`);
+      console.error('Hugging Face error:', aiResponse.status, errorText);
+      throw new Error(`Hugging Face API error: ${aiResponse.status}`);
     }
 
     const aiData = await aiResponse.json();
-    const aiContent = aiData.choices[0].message.content;
+    console.log('Raw AI response:', aiData);
     
-    // Parse JSON response
-    let jsonText = aiContent.trim();
-    if (jsonText.startsWith('```')) {
-      const lines = jsonText.split('\n');
-      jsonText = lines.slice(1, -1).join('\n');
-      if (jsonText.startsWith('json')) {
-        jsonText = jsonText.substring(4).trim();
+    let generatedText = '';
+    if (Array.isArray(aiData)) {
+      generatedText = aiData[0]?.generated_text || '';
+    } else {
+      generatedText = aiData.generated_text || '';
+    }
+
+    // Extract JSON from response
+    let jsonText = generatedText.trim();
+    
+    // Remove markdown code blocks if present
+    if (jsonText.includes('```')) {
+      const jsonMatch = jsonText.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
+      if (jsonMatch) {
+        jsonText = jsonMatch[1];
       }
     }
     
-    const result = JSON.parse(jsonText);
+    // Try to find JSON object in text
+    const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      jsonText = jsonMatch[0];
+    }
+
+    let result;
+    try {
+      result = JSON.parse(jsonText);
+    } catch (parseError) {
+      console.error('Failed to parse JSON:', jsonText);
+      // Fallback response
+      result = {
+        intent: 'outro',
+        confidence: 0.5,
+        response: `Olá ${customerName}! Estou aqui para te ajudar. Pode me contar mais sobre o que você precisa?`
+      };
+    }
     
     console.log('AI Analysis:', result);
 
