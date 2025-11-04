@@ -15,12 +15,12 @@ serve(async (req) => {
     const HF_TOKEN = Deno.env.get('HUGGING_FACE_ACCESS_TOKEN');
 
     if (!HF_TOKEN) {
-      throw new Error('HUGGING_FACE_ACCESS_TOKEN não configurado');
+      throw new Error('HUGGING_FACE_ACCESS_TOKEN not configured');
     }
 
     console.log('Processing message with HuggingFace:', message);
 
-    // Classificar intenção da mensagem
+    // Classify message intent
     const intentResponse = await fetch(
       "https://api-inference.huggingface.co/models/facebook/bart-large-mnli",
       {
@@ -54,14 +54,14 @@ serve(async (req) => {
     }
 
     const intentData = await intentResponse.json();
-    const topIntent = intentData?.labels?.[0];
-    const confidence = intentData?.scores?.[0];
+    const topIntent = intentData?.labels?.[0] || 'unknown';
+    const confidence = intentData?.scores?.[0] || 0;
 
     console.log('Intent detected:', topIntent, 'Confidence:', confidence);
 
     let responseText = '';
 
-    // Gerar respostas baseadas na intenção
+    // Generate responses based on intent
     if (topIntent === "fazer pedido") {
       responseText = `Olá ${customerName}! 🍕 Que ótimo que quer fazer um pedido! Pode me dizer o que gostaria?`;
     } else if (topIntent === "reclamação") {
@@ -75,7 +75,7 @@ serve(async (req) => {
     } else if (topIntent === "status do pedido") {
       responseText = `Olá ${customerName}! Vou verificar o status do seu pedido. Um momento por favor... ⏳`;
     } else {
-      // Para outros casos, usar modelo de geração de texto
+      // Use text generation model for other cases
       const generationPrompt = `Você é um atendente simpático de um delivery de comida. O cliente ${customerName} disse: "${message}". Responda de forma educada, breve e útil em português brasileiro.`;
       
       const generationResponse = await fetch(
