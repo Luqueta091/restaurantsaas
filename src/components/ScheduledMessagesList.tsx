@@ -20,7 +20,14 @@ export function ScheduledMessagesList({ restaurantId }: ScheduledMessagesListPro
     queryFn: async () => {
       const { data, error } = await supabase
         .from("scheduled_messages")
-        .select("*")
+        .select(`
+          *,
+          recipients:scheduled_message_recipients(
+            status,
+            retry_count,
+            error_message
+          )
+        `)
         .eq("restaurant_id", restaurantId)
         .order("scheduled_for", { ascending: false })
         .limit(10);

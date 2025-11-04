@@ -97,28 +97,48 @@ serve(async (req) => {
           });
 
           if (sendError) {
-            console.error(`Erro ao enviar para ${recipient.customer_id}:`, sendError);
             const newRetryCount = retryCount + 1;
-            const isFinalFailure = newRetryCount >= 3;
             
-            failedCount++;
-            await supabase
-              .from("scheduled_message_recipients")
-              .update({
-                status: isFinalFailure ? "failed" : "pending",
-                error_message: sendError.message,
-                retry_count: newRetryCount,
-                last_retry_at: new Date().toISOString(),
-              })
-              .eq("id", recipient.id);
-              
-            if (isFinalFailure) {
-              console.log(`Falha definitiva após 3 tentativas para ${recipient.customer_id}`);
+            // Identificar se é um erro temporário/recuperável
+            const isNetworkError = sendError.message?.includes("connection") || 
+                                   sendError.message?.includes("fetch") ||
+                                   sendError.message?.includes("timeout") ||
+                                   sendError.message?.includes("FunctionsFetchError");
+            
+            const shouldRetry = isNetworkError && newRetryCount < 3;
+            
+            console.error(`Erro ao enviar para ${recipient.customer_id} (tentativa ${newRetryCount}/3):`, sendError.message);
+            
+            if (shouldRetry) {
+              // Marca como failed temporariamente, será retentado
+              await supabase
+                .from("scheduled_message_recipients")
+                .update({
+                  status: "failed",
+                  error_message: `[Retry ${newRetryCount}/3] ${sendError.message}`,
+                  retry_count: newRetryCount,
+                  last_retry_at: new Date().toISOString(),
+                })
+                .eq("id", recipient.id);
+              console.log(`Retry agendado para ${recipient.customer_id} (tentativa ${newRetryCount + 1} em ${Math.pow(2, newRetryCount)} minuto(s))`);
             } else {
-              console.log(`Reagendando retry ${newRetryCount} para ${recipient.customer_id}`);
+              // Falha definitiva
+              failedCount++;
+              await supabase
+                .from("scheduled_message_recipients")
+                .update({
+                  status: "failed",
+                  error_message: newRetryCount >= 3 
+                    ? `Falhou após 3 tentativas: ${sendError.message}`
+                    : `Erro não recuperável: ${sendError.message}`,
+                  retry_count: newRetryCount,
+                  last_retry_at: new Date().toISOString(),
+                })
+                .eq("id", recipient.id);
+              console.log(`Falha definitiva para ${recipient.customer_id}${newRetryCount >= 3 ? ' após 3 tentativas' : ' (erro não recuperável)'}`);
             }
           } else {
-            console.log(`Enviado com sucesso para ${recipient.customer_id}`);
+            console.log(`✓ Enviado com sucesso para ${recipient.customer_id}${retryCount > 0 ? ` (após ${retryCount + 1} tentativa(s))` : ''}`);
             sentCount++;
             await supabase
               .from("scheduled_message_recipients")
@@ -135,20 +155,34 @@ serve(async (req) => {
             await new Promise((resolve) => setTimeout(resolve, message.delay_seconds * 1000));
           }
         } catch (error: any) {
-          console.error(`Erro ao processar destinatário ${recipient.id}:`, error);
+          console.error(`Erro inesperado ao processar destinatário ${recipient.id}:`, error);
           const retryCount = (recipient.retry_count || 0) + 1;
-          const isFinalFailure = retryCount >= 3;
+          const shouldRetry = retryCount < 3;
           
-          failedCount++;
-          await supabase
-            .from("scheduled_message_recipients")
-            .update({
-              status: isFinalFailure ? "failed" : "pending",
-              error_message: error.message,
-              retry_count: retryCount,
-              last_retry_at: new Date().toISOString(),
-            })
-            .eq("id", recipient.id);
+          if (shouldRetry) {
+            await supabase
+              .from("scheduled_message_recipients")
+              .update({
+                status: "failed",
+                error_message: `[Retry ${retryCount}/3] Erro inesperado: ${error.message}`,
+                retry_count: retryCount,
+                last_retry_at: new Date().toISOString(),
+              })
+              .eq("id", recipient.id);
+            console.log(`Retry agendado para ${recipient.customer_id} após erro inesperado`);
+          } else {
+            failedCount++;
+            await supabase
+              .from("scheduled_message_recipients")
+              .update({
+                status: "failed",
+                error_message: `Falhou após 3 tentativas: ${error.message}`,
+                retry_count: retryCount,
+                last_retry_at: new Date().toISOString(),
+              })
+              .eq("id", recipient.id);
+            console.log(`Falha definitiva para ${recipient.customer_id} após erro inesperado`);
+          }
         }
       }
 
