@@ -9,6 +9,8 @@ import { RecentMessages } from "@/components/RecentMessages";
 import { AIChatbot } from "@/components/AIChatbot";
 import { AIFeatures } from "@/components/AIFeatures";
 import { SendMessageDialog } from "@/components/SendMessageDialog";
+import { OrderDialog } from "@/components/OrderDialog";
+import { OrderHistory } from "@/components/OrderHistory";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -40,6 +42,24 @@ const Index = () => {
     customerId: "",
     customerName: "",
     customerPhone: "",
+  });
+  const [orderDialog, setOrderDialog] = useState<{
+    open: boolean;
+    customerId: string;
+    customerName: string;
+  }>({
+    open: false,
+    customerId: "",
+    customerName: "",
+  });
+  const [orderHistoryDialog, setOrderHistoryDialog] = useState<{
+    open: boolean;
+    customerId: string;
+    customerName: string;
+  }>({
+    open: false,
+    customerId: "",
+    customerName: "",
   });
 
   useEffect(() => {
@@ -181,6 +201,22 @@ const Index = () => {
     });
   };
 
+  const handleRegisterOrder = (customerId: string, customerName: string) => {
+    setOrderDialog({
+      open: true,
+      customerId,
+      customerName,
+    });
+  };
+
+  const handleViewOrders = (customerId: string, customerName: string) => {
+    setOrderHistoryDialog({
+      open: true,
+      customerId,
+      customerName,
+    });
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -226,6 +262,8 @@ const Index = () => {
           <CustomerList
             customers={customers}
             onSendMessage={handleSendMessage}
+            onRegisterOrder={handleRegisterOrder}
+            onViewOrders={handleViewOrders}
           />
           <RecentMessages messages={messages} />
         </div>
@@ -243,6 +281,22 @@ const Index = () => {
         customerPhone={sendMessageDialog.customerPhone}
         restaurantId={restaurant?.id || ""}
         onSuccess={loadRestaurantData}
+      />
+
+      <OrderDialog
+        open={orderDialog.open}
+        onOpenChange={(open) => setOrderDialog({ ...orderDialog, open })}
+        customerId={orderDialog.customerId}
+        customerName={orderDialog.customerName}
+        restaurantId={restaurant?.id || ""}
+        onSuccess={loadRestaurantData}
+      />
+
+      <OrderHistory
+        open={orderHistoryDialog.open}
+        onOpenChange={(open) => setOrderHistoryDialog({ ...orderHistoryDialog, open })}
+        customerId={orderHistoryDialog.customerId}
+        customerName={orderHistoryDialog.customerName}
       />
 
       <Dialog open={showNewCustomerDialog} onOpenChange={setShowNewCustomerDialog}>
