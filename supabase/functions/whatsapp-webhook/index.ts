@@ -39,6 +39,41 @@ serve(async (req) => {
   }
 });
 
+// Palavras-chave para detecção rápida de pedidos (sem IA)
+const ORDER_KEYWORDS = [
+  'pedido', 'comprar', 'quero', 'gostaria', 'preço', 'valor', 
+  'entregar', 'delivery', 'cardápio', 'menu', 'pedir'
+];
+
+// Palavras-chave de confirmação do restaurante (cria pedido direto)
+const RESTAURANT_CONFIRMATION_KEYWORDS = [
+  'seu pedido está sendo feito',
+  'pedido confirmado',
+  'pedido em preparo',
+  'estamos preparando seu pedido',
+  'pedido aceito'
+];
+
+// Mensagens ignoradas (não precisa processar)
+const IGNORE_PATTERNS = [
+  /^(oi|olá|ok|obrigad[oa]|valeu|tá|sim|não)$/i,
+  /^.{1,3}$/  // Mensagens muito curtas
+];
+
+function shouldIgnoreMessage(text: string): boolean {
+  return IGNORE_PATTERNS.some(pattern => pattern.test(text.trim()));
+}
+
+function hasOrderKeywords(text: string): boolean {
+  const lowerText = text.toLowerCase();
+  return ORDER_KEYWORDS.some(keyword => lowerText.includes(keyword));
+}
+
+function isRestaurantConfirmation(text: string): boolean {
+  const lowerText = text.toLowerCase();
+  return RESTAURANT_CONFIRMATION_KEYWORDS.some(keyword => lowerText.includes(keyword));
+}
+
 async function handleMessage(payload: any) {
   // Verificar se é uma mensagem recebida (não enviada por nós)
   if (!payload.data?.key?.fromMe && payload.data?.message) {
@@ -52,10 +87,16 @@ async function handleMessage(payload: any) {
     
     console.log('Processing message from:', phoneNumber, 'Text:', messageText);
 
-    // Buscar cliente pelo telefone (agora com índice otimizado)
+    // FILTRO 1: Ignorar mensagens muito curtas ou sem sentido
+    if (shouldIgnoreMessage(messageText)) {
+      console.log('Message ignored (too short or generic)');
+      return;
+    }
+
+    // Buscar cliente e restaurante
     const { data: customers, error: customerError } = await supabase
       .from('customers')
-      .select('id, name, restaurant_id')
+      .select('id, name, restaurant_id, restaurants(whatsapp_number)')
       .ilike('phone', `%${phoneNumber}%`)
       .limit(1);
 
@@ -65,9 +106,50 @@ async function handleMessage(payload: any) {
     }
 
     const customer = customers[0];
+    const restaurantWhatsapp = customer.restaurants?.whatsapp_number;
     console.log('Customer found:', customer);
 
-    // Usar IA para detectar se é um pedido e extrair informações
+    // CAMINHO 1: Mensagem do restaurante confirmando pedido (SEM IA)
+    if (restaurantWhatsapp && phoneNumber.includes(restaurantWhatsapp.replace(/\D/g, ''))) {
+      if (isRestaurantConfirmation(messageText)) {
+        console.log('Restaurant confirmation detected - creating order directly');
+        
+        // Extrair número do pedido se tiver
+        const orderNumberMatch = messageText.match(/#?(\d+)/);
+        const orderNumber = orderNumberMatch ? orderNumberMatch[1] : `WPP-${Date.now()}`;
+        
+        const { data: order, error: orderError } = await supabase
+          .from('orders')
+          .insert({
+            customer_id: customer.id,
+            restaurant_id: customer.restaurant_id,
+            order_number: orderNumber,
+            total_amount: 0,
+            status: 'confirmed',
+            notes: `Confirmação do restaurante: ${messageText}`,
+          })
+          .select()
+          .single();
+
+        if (orderError) {
+          console.error('Error creating order:', orderError);
+          throw orderError;
+        }
+
+        console.log('Order created from restaurant confirmation:', order);
+        return;
+      }
+    }
+
+    // FILTRO 2: Verificar se tem palavras-chave de pedido
+    if (!hasOrderKeywords(messageText)) {
+      console.log('No order keywords detected - skipping AI analysis');
+      return;
+    }
+
+    // CAMINHO 2: Mensagem do cliente com palavras-chave (USA IA)
+    console.log('Order keywords detected - analyzing with AI');
+    
     const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
     
     const aiPrompt = `Analise a seguinte mensagem de WhatsApp e determine se é um pedido de restaurante.
