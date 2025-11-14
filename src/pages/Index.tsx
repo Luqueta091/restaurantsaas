@@ -219,20 +219,22 @@ const Index = () => {
       // Calcular faturamento real
       const totalRealRevenue = orders?.reduce((sum, order) => sum + parseFloat(order.total_amount?.toString() || "0"), 0) || 0;
 
-      // Buscar dados de prova social se existirem
-      const { data: proofConfig } = await supabase
-        .from("dashboard_config")
-        .select("*")
-        .eq("restaurant_id", restaurant.id)
-        .maybeSingle();
+      // Atualizar métricas de prova social se existirem
+      if (config?.proof_customers && config.proof_customers > 0) {
+        setProofMetrics({
+          totalCustomers: config.proof_customers,
+          messagesSent: config.proof_messages || 0,
+          conversionRate: `${config.proof_conversion_rate || 8.5}%`,
+        });
+      }
 
-      if (proofConfig) {
-        // Gerar dados do gráfico baseado na config
+      // Se tiver configuração de prova social, gerar gráfico com crescimento
+      if (config?.total_revenue && config.total_revenue > 0) {
         const generateProofChartData = () => {
           const data = [];
           const days = 30;
-          const startRevenue = proofConfig.total_revenue * 0.3;
-          const growthPerDay = (proofConfig.total_revenue - startRevenue) / days;
+          const startRevenue = config.total_revenue * 0.3;
+          const growthPerDay = (config.total_revenue - startRevenue) / days;
           const today = new Date();
 
           for (let i = 0; i < days; i++) {
@@ -253,13 +255,13 @@ const Index = () => {
         const proofChartData = generateProofChartData();
 
         setRevenueData({
-          chartData: proofChartData.length > 0 ? proofChartData : chartData,
-          totalRevenue: proofConfig.total_revenue || totalRealRevenue,
-          monthlyRevenue: proofConfig.monthly_revenue || totalRealRevenue,
-          growthPercentage: proofConfig.revenue_growth_percentage || 0,
+          chartData: proofChartData,
+          totalRevenue: config.total_revenue,
+          monthlyRevenue: config.monthly_revenue || config.total_revenue,
+          growthPercentage: config.revenue_growth_percentage || 0,
         });
       } else {
-        // Usar valores da config se existirem, senão usar valores reais
+        // Usar dados reais dos pedidos
         setRevenueData({
           chartData: chartData.length > 0 ? chartData : [{ date: new Date().toISOString().split("T")[0], revenue: 0 }],
           totalRevenue: config?.total_revenue || totalRealRevenue,

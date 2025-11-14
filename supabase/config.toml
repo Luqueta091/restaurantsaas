@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.ai-customer-service]
 verify_jwt = false
+
+[functions.generate-proof-data]
+verify_jwt = true

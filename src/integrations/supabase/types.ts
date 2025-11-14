@@ -60,6 +60,9 @@ export type Database = {
           created_at: string | null
           id: string
           monthly_revenue: number | null
+          proof_conversion_rate: number | null
+          proof_customers: number | null
+          proof_messages: number | null
           restaurant_id: string
           revenue_growth_percentage: number | null
           total_revenue: number | null
@@ -69,6 +72,9 @@ export type Database = {
           created_at?: string | null
           id?: string
           monthly_revenue?: number | null
+          proof_conversion_rate?: number | null
+          proof_customers?: number | null
+          proof_messages?: number | null
           restaurant_id: string
           revenue_growth_percentage?: number | null
           total_revenue?: number | null
@@ -78,6 +84,9 @@ export type Database = {
           created_at?: string | null
           id?: string
           monthly_revenue?: number | null
+          proof_conversion_rate?: number | null
+          proof_customers?: number | null
+          proof_messages?: number | null
           restaurant_id?: string
           revenue_growth_percentage?: number | null
           total_revenue?: number | null
