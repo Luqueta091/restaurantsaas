@@ -123,6 +123,9 @@ Formato: {"totalCustomers": X, "messagesSent": Y, "conversionRate": Z, "revenueG
       total_revenue: targetRevenue,
       monthly_revenue: targetRevenue,
       revenue_growth_percentage: metrics.revenueGrowthPercentage,
+      proof_customers: metrics.totalCustomers,
+      proof_messages: metrics.messagesSent,
+      proof_conversion_rate: metrics.conversionRate,
       updated_at: new Date().toISOString(),
     };
 
