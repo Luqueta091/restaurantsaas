@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Search, Phone, Calendar, Trophy, MessageSquare, ShoppingBag, History } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -65,13 +66,14 @@ export const CustomerList = ({ customers, onSendMessage, onRegisterOrder, onView
         </div>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          {filteredCustomers.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">
-              Nenhum cliente encontrado
-            </p>
-          ) : (
-            filteredCustomers.map((customer) => (
+        <ScrollArea className="h-[400px] pr-4">
+          <div className="space-y-4">
+            {filteredCustomers.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">
+                Nenhum cliente encontrado
+              </p>
+            ) : (
+              filteredCustomers.map((customer) => (
               <div
                 key={customer.id}
                 className="flex flex-col gap-3 p-4 border rounded-lg hover:bg-muted/50 transition-colors"
@@ -141,9 +143,10 @@ export const CustomerList = ({ customers, onSendMessage, onRegisterOrder, onView
                   </Button>
                 </div>
               </div>
-            ))
-          )}
-        </div>
+              ))
+            )}
+          </div>
+        </ScrollArea>
       </CardContent>
     </Card>
   );

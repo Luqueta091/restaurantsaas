@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { MessageSquare, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -56,13 +57,14 @@ export const RecentMessages = ({ messages }: RecentMessagesProps) => {
         <CardTitle>Mensagens Recentes</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          {messages.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">
-              Nenhuma mensagem enviada ainda
-            </p>
-          ) : (
-            messages.map((message) => (
+        <ScrollArea className="h-[400px] pr-4">
+          <div className="space-y-4">
+            {messages.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">
+                Nenhuma mensagem enviada ainda
+              </p>
+            ) : (
+              messages.map((message) => (
               <div
                 key={message.id}
                 className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
@@ -82,9 +84,10 @@ export const RecentMessages = ({ messages }: RecentMessagesProps) => {
                   </p>
                 </div>
               </div>
-            ))
-          )}
-        </div>
+              ))
+            )}
+          </div>
+        </ScrollArea>
       </CardContent>
     </Card>
   );
