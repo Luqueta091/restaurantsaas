@@ -1,5 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { Users, MessageSquare, Gift, TrendingUp } from "lucide-react";
+import { Users, MessageSquare, Gift, TrendingUp, DollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface StatCardProps {
@@ -46,6 +46,8 @@ interface DashboardStatsProps {
   messagesSent: number;
   activeCampaigns: number;
   conversionRate: string;
+  totalRevenue?: number;
+  revenueGrowth?: string;
 }
 
 export const DashboardStats = ({
@@ -53,9 +55,18 @@ export const DashboardStats = ({
   messagesSent,
   activeCampaigns,
   conversionRate,
+  totalRevenue = 0,
+  revenueGrowth = "+0%",
 }: DashboardStatsProps) => {
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(value);
+  };
+
   return (
-    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
       <StatCard
         title="Total de Clientes"
         value={totalCustomers}
@@ -82,6 +93,13 @@ export const DashboardStats = ({
         icon={<TrendingUp className="w-6 h-6" />}
         trend="+5% este mês"
         variant="success"
+      />
+      <StatCard
+        title="Faturamento"
+        value={formatCurrency(totalRevenue)}
+        icon={<DollarSign className="w-6 h-6" />}
+        trend={revenueGrowth}
+        variant="default"
       />
     </div>
   );

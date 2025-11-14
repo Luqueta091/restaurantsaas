@@ -55,6 +55,36 @@ export type Database = {
           },
         ]
       }
+      dashboard_config: {
+        Row: {
+          created_at: string | null
+          id: string
+          monthly_revenue: number | null
+          restaurant_id: string
+          revenue_growth_percentage: number | null
+          total_revenue: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          monthly_revenue?: number | null
+          restaurant_id: string
+          revenue_growth_percentage?: number | null
+          total_revenue?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          monthly_revenue?: number | null
+          restaurant_id?: string
+          revenue_growth_percentage?: number | null
+          total_revenue?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       engagement_metrics: {
         Row: {
           customer_id: string | null
@@ -509,7 +539,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      calculate_restaurant_revenue: {
+        Args: { period?: string; rest_id: string }
+        Returns: {
+          growth_percentage: number
+          period_revenue: number
+          total_revenue: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

@@ -13,12 +13,14 @@ import { OrderDialog } from "@/components/OrderDialog";
 import { OrderHistory } from "@/components/OrderHistory";
 import { ScheduledMessagesDialog } from "@/components/ScheduledMessagesDialog";
 import { ScheduledMessagesList } from "@/components/ScheduledMessagesList";
+import { RevenueChart } from "@/components/RevenueChart";
+import { DashboardConfigDialog } from "@/components/DashboardConfigDialog";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { UserPlus, Loader2 } from "lucide-react";
+import { UserPlus, Loader2, Settings } from "lucide-react";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -63,6 +65,13 @@ const Index = () => {
     customerId: "",
     customerName: "",
   });
+  const [showConfigDialog, setShowConfigDialog] = useState(false);
+  const [revenueData, setRevenueData] = useState({
+    chartData: [] as { date: string; revenue: number }[],
+    totalRevenue: 0,
+    monthlyRevenue: 0,
+    growthPercentage: 0,
+  });
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -89,6 +98,12 @@ const Index = () => {
       loadRestaurantData();
     }
   }, [session]);
+
+  useEffect(() => {
+    if (restaurant?.id) {
+      loadRevenueData();
+    }
+  }, [restaurant?.id]);
 
   const loadRestaurantData = async () => {
     try {
@@ -158,6 +173,56 @@ const Index = () => {
       toast.error("Erro ao carregar dados: " + error.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadRevenueData = async () => {
+    if (!restaurant?.id) return;
+
+    try {
+      // Carregar configuração personalizada
+      const { data: config } = await supabase
+        .from("dashboard_config")
+        .select("*")
+        .eq("restaurant_id", restaurant.id)
+        .maybeSingle();
+
+      // Buscar pedidos dos últimos 30 dias para o gráfico
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const { data: orders } = await supabase
+        .from("orders")
+        .select("created_at, total_amount")
+        .eq("restaurant_id", restaurant.id)
+        .gte("created_at", thirtyDaysAgo.toISOString())
+        .not("status", "eq", "cancelled")
+        .order("created_at", { ascending: true });
+
+      // Agrupar pedidos por dia
+      const dailyRevenue: { [key: string]: number } = {};
+      orders?.forEach((order) => {
+        const date = new Date(order.created_at).toISOString().split("T")[0];
+        dailyRevenue[date] = (dailyRevenue[date] || 0) + parseFloat(order.total_amount?.toString() || "0");
+      });
+
+      const chartData = Object.entries(dailyRevenue).map(([date, revenue]) => ({
+        date,
+        revenue,
+      }));
+
+      // Calcular faturamento real
+      const totalRealRevenue = orders?.reduce((sum, order) => sum + parseFloat(order.total_amount?.toString() || "0"), 0) || 0;
+
+      // Usar valores da config se existirem, senão usar valores reais
+      setRevenueData({
+        chartData: chartData.length > 0 ? chartData : [{ date: new Date().toISOString().split("T")[0], revenue: 0 }],
+        totalRevenue: config?.total_revenue || totalRealRevenue,
+        monthlyRevenue: config?.monthly_revenue || totalRealRevenue,
+        growthPercentage: config?.revenue_growth_percentage || 0,
+      });
+    } catch (error: any) {
+      console.error("Erro ao carregar dados de faturamento:", error);
     }
   };
 
@@ -245,6 +310,13 @@ const Index = () => {
             </p>
           </div>
           <div className="flex gap-2">
+            <Button
+              onClick={() => setShowConfigDialog(true)}
+              variant="outline"
+            >
+              <Settings className="w-4 h-4 mr-2" />
+              Configurar
+            </Button>
             <ScheduledMessagesDialog restaurantId={restaurant?.id || ""} />
             <Button
               onClick={() => setShowNewCustomerDialog(true)}
@@ -261,6 +333,15 @@ const Index = () => {
           messagesSent={messages.length}
           activeCampaigns={0}
           conversionRate="8.5%"
+          totalRevenue={revenueData.totalRevenue}
+          revenueGrowth={`${revenueData.growthPercentage >= 0 ? '+' : ''}${revenueData.growthPercentage.toFixed(1)}%`}
+        />
+
+        <RevenueChart
+          data={revenueData.chartData}
+          totalRevenue={revenueData.totalRevenue}
+          monthlyRevenue={revenueData.monthlyRevenue}
+          growthPercentage={revenueData.growthPercentage}
         />
 
         <div className="grid gap-8 lg:grid-cols-2">
@@ -375,6 +456,16 @@ const Index = () => {
           </form>
         </DialogContent>
       </Dialog>
+
+      <DashboardConfigDialog
+        open={showConfigDialog}
+        onOpenChange={setShowConfigDialog}
+        restaurantId={restaurant?.id || ""}
+        onConfigUpdate={() => {
+          loadRevenueData();
+          loadRestaurantData();
+        }}
+      />
     </div>
   );
 };
