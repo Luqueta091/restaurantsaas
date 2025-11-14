@@ -72,6 +72,11 @@ const Index = () => {
     monthlyRevenue: 0,
     growthPercentage: 0,
   });
+  const [proofMetrics, setProofMetrics] = useState({
+    totalCustomers: 0,
+    messagesSent: 0,
+    conversionRate: "8.5%",
+  });
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -214,13 +219,54 @@ const Index = () => {
       // Calcular faturamento real
       const totalRealRevenue = orders?.reduce((sum, order) => sum + parseFloat(order.total_amount?.toString() || "0"), 0) || 0;
 
-      // Usar valores da config se existirem, senão usar valores reais
-      setRevenueData({
-        chartData: chartData.length > 0 ? chartData : [{ date: new Date().toISOString().split("T")[0], revenue: 0 }],
-        totalRevenue: config?.total_revenue || totalRealRevenue,
-        monthlyRevenue: config?.monthly_revenue || totalRealRevenue,
-        growthPercentage: config?.revenue_growth_percentage || 0,
-      });
+      // Buscar dados de prova social se existirem
+      const { data: proofConfig } = await supabase
+        .from("dashboard_config")
+        .select("*")
+        .eq("restaurant_id", restaurant.id)
+        .maybeSingle();
+
+      if (proofConfig) {
+        // Gerar dados do gráfico baseado na config
+        const generateProofChartData = () => {
+          const data = [];
+          const days = 30;
+          const startRevenue = proofConfig.total_revenue * 0.3;
+          const growthPerDay = (proofConfig.total_revenue - startRevenue) / days;
+          const today = new Date();
+
+          for (let i = 0; i < days; i++) {
+            const date = new Date(today);
+            date.setDate(date.getDate() - (days - i - 1));
+            const baseRevenue = startRevenue + (growthPerDay * i);
+            const variation = baseRevenue * (Math.random() * 0.2 - 0.1);
+            const dailyRevenue = Math.max(0, baseRevenue + variation);
+
+            data.push({
+              date: date.toISOString().split("T")[0],
+              revenue: Math.round(dailyRevenue * 100) / 100,
+            });
+          }
+          return data;
+        };
+
+        const proofChartData = generateProofChartData();
+
+        setRevenueData({
+          chartData: proofChartData.length > 0 ? proofChartData : chartData,
+          totalRevenue: proofConfig.total_revenue || totalRealRevenue,
+          monthlyRevenue: proofConfig.monthly_revenue || totalRealRevenue,
+          growthPercentage: proofConfig.revenue_growth_percentage || 0,
+        });
+      } else {
+        // Usar valores da config se existirem, senão usar valores reais
+        setRevenueData({
+          chartData: chartData.length > 0 ? chartData : [{ date: new Date().toISOString().split("T")[0], revenue: 0 }],
+          totalRevenue: config?.total_revenue || totalRealRevenue,
+          monthlyRevenue: config?.monthly_revenue || totalRealRevenue,
+          growthPercentage: config?.revenue_growth_percentage || 0,
+        });
+      }
     } catch (error: any) {
       console.error("Erro ao carregar dados de faturamento:", error);
     }
@@ -329,10 +375,10 @@ const Index = () => {
         </div>
 
         <DashboardStats
-          totalCustomers={customers.length}
-          messagesSent={messages.length}
+          totalCustomers={proofMetrics.totalCustomers || customers.length}
+          messagesSent={proofMetrics.messagesSent || messages.length}
           activeCampaigns={0}
-          conversionRate="8.5%"
+          conversionRate={proofMetrics.conversionRate}
           totalRevenue={revenueData.totalRevenue}
           revenueGrowth={`${revenueData.growthPercentage >= 0 ? '+' : ''}${revenueData.growthPercentage.toFixed(1)}%`}
         />
